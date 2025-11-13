@@ -42,6 +42,8 @@ class Settings(BaseSettings):
 
     # Server
     host: str = "0.0.0.0"
+    # Port 8000 for development (when running alongside Vite dev server)
+    # Port 5000 for production (serving both frontend and API)
     port: int = 8000
 
     @property

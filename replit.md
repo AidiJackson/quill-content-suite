@@ -2,36 +2,54 @@
 
 ## Project Overview
 
-**Quillography Content Suite** is a comprehensive FastAPI backend application that provides AI-powered content creation, editing, campaign management, and media processing services.
+**Quillography Content Suite** is a full-stack application featuring an AI-powered FastAPI backend and a modern React frontend for content creation, editing, campaign management, and media processing.
 
 ### Key Features
-- Written Content Generation (blogs, newsletters, social posts, campaigns)
-- Virality Engine for content scoring and optimization
-- Video & Audio Processing (trimming, resizing, captions, pitch/tempo shifting)
-- Project Management with versioning
-- Interactive API documentation at `/docs`
+- **Frontend**: Modern React + Vite UI with shadcn/ui components
+- **Written Content Generation**: Blogs, newsletters, social posts, campaigns
+- **Virality Engine**: Content scoring and optimization
+- **Video & Audio Processing**: Trimming, resizing, captions, pitch/tempo shifting
+- **Project Management**: Organize content and media with versioning
+- **Interactive API Documentation**: Available at `/docs`
 
 ## Tech Stack
 
+### Backend
 - **Framework**: FastAPI
 - **Language**: Python 3.11
 - **ORM**: SQLAlchemy 2.x
-- **Database**: SQLite (development) / PostgreSQL (production)
+- **Database**: PostgreSQL (Replit) / SQLite (fallback)
 - **Migrations**: Alembic
 - **Validation**: Pydantic v2
 - **Server**: Uvicorn
-- **Testing**: pytest + HTTPX
+
+### Frontend
+- **Framework**: React 18 + Vite 6
+- **UI Library**: shadcn/ui + Radix UI
+- **Styling**: Tailwind CSS
+- **Components**: Lucide icons, Recharts
+- **Language**: TypeScript
 
 ## Replit Setup
 
+### Architecture
+
+The application runs as two separate services:
+
+- **Frontend** (React + Vite): Port 5000 - Exposed via Replit webview
+- **Backend** (FastAPI): Port 8000 - Internal API server
+
+Both services start automatically and communicate over localhost.
+
 ### Environment Configuration
 
-The application uses default configuration values that work out of the box:
+Default configuration values that work out of the box:
 
-- **Server Host**: 0.0.0.0 (required for Replit)
-- **Server Port**: 5000 (Replit's exposed port)
-- **Database**: SQLite (`quillography.db`) in development
-- **CORS**: Configured to allow all origins for Replit proxy
+- **Frontend Port**: 5000 (Replit's exposed webview port)
+- **Backend Port**: 8000 (internal API server)
+- **Backend Host**: 0.0.0.0 (required for Replit)
+- **Database**: PostgreSQL (Replit managed) with SQLite fallback
+- **CORS**: Configured to allow frontend requests
 - **AI Service**: Uses fake/deterministic AI client by default (no API key needed)
 
 ### Optional Environment Variables
@@ -47,38 +65,74 @@ If you need to customize settings, you can set these environment variables in Re
 
 ### Running the Application
 
-The FastAPI server runs automatically via the configured workflow:
+#### Development Mode
 
+Both frontend and backend run as separate services:
+
+**Frontend (React + Vite)** - Port 5000:
 ```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 5000
+cd frontend && npm run dev -- --host 0.0.0.0 --port 5000
 ```
+- Served via Replit webview
+- Proxies `/api` requests to backend at `localhost:8000`
 
-The API is accessible at:
-- Development: Via the Replit webview
-- Interactive Docs: `/docs` (Swagger UI)
-- Alternative Docs: `/redoc` (ReDoc)
-- Health Check: `/health`
+**Backend (FastAPI)** - Port 8000:
+```bash
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+- Internal API server
+- All routes prefixed with `/api`
+
+#### Production Mode (Autoscale Deployment)
+
+Single FastAPI server on port 5000 serves both:
+- Static React build from `frontend/build/`
+- API endpoints at `/api/*`
+
+The deployment automatically:
+1. Builds frontend: `cd frontend && npm run build`
+2. Starts backend: `uvicorn app.main:app --host 0.0.0.0 --port 5000`
+
+### Accessing the Application
+
+**Development**:
+- **Frontend UI**: Via Replit webview (port 5000)
+- **API Documentation**: `http://localhost:8000/docs` (Swagger UI)
+- **Health Check**: `http://localhost:8000/api/health`
+
+**Production**:
+- **Everything**: Via your published Replit domain (port 5000)
+- **API Documentation**: `https://your-domain/docs` (Swagger UI)
+- **Health Check**: `https://your-domain/api/health`
 
 ### Project Structure
 
 ```
 quill-content-suite/
-├── app/
+├── frontend/               # React + Vite frontend
+│   ├── src/
+│   │   ├── components/    # UI components (shadcn/ui)
+│   │   ├── styles/        # Global styles
+│   │   ├── App.tsx        # Main app component
+│   │   └── main.tsx       # Entry point
+│   ├── package.json       # Frontend dependencies
+│   ├── vite.config.ts     # Vite configuration
+│   └── .env               # Frontend environment vars
+├── app/                   # FastAPI backend
 │   ├── api/
-│   │   ├── routes/         # API endpoints
-│   │   └── deps.py         # Dependencies (auth, DB)
-│   ├── core/               # Configuration and logging
-│   ├── db/                 # Database setup
-│   ├── models/             # SQLAlchemy models
-│   ├── schemas/            # Pydantic schemas
-│   ├── services/           # Business logic
-│   ├── utils/              # Utilities
-│   └── main.py             # FastAPI app
-├── alembic/                # Database migrations
-├── tests/                  # Test suite
-├── requirements.txt        # Python dependencies
-├── Makefile               # Development commands
-└── quillography.db        # SQLite database (gitignored)
+│   │   ├── routes/        # API endpoints
+│   │   └── deps.py        # Dependencies (auth, DB)
+│   ├── core/              # Configuration and logging
+│   ├── db/                # Database setup
+│   ├── models/            # SQLAlchemy models
+│   ├── schemas/           # Pydantic schemas
+│   ├── services/          # Business logic
+│   ├── utils/             # Utilities
+│   └── main.py            # FastAPI app
+├── alembic/               # Database migrations
+├── tests/                 # Backend test suite
+├── requirements.txt       # Python dependencies
+└── Makefile              # Development commands
 ```
 
 ## API Endpoints
@@ -178,13 +232,14 @@ For production deployments:
 
 ## Recent Changes
 
-- **2025-11-13**: Initial Replit setup
-  - Configured Python 3.11 environment
-  - Updated CORS to allow Replit proxy domains
-  - Changed default port to 5000 for Replit
-  - Configured autoscale deployment
-  - Created workflow for FastAPI server
+- **2025-11-13**: Full-stack setup completed
+  - Configured Python 3.11 and Node.js 20 environments
+  - Extracted and integrated React + Vite frontend with shadcn/ui components
+  - Backend moved to port 8000, frontend on port 5000
+  - Updated CORS to allow frontend requests
+  - Configured dual workflows for frontend and backend
   - Database migrations completed successfully
+  - Autoscale deployment configured
 
 ## Architecture
 
