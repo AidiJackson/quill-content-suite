@@ -35,15 +35,14 @@ class Settings(BaseSettings):
 
     # CORS
     cors_origins: List[str] = [
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://localhost:8080",
+        "http://localhost:5000",
+        "https://*.replit.dev",
         "*",
     ]
 
     # Server
     host: str = "0.0.0.0"
-    port: int = 5000
+    port: int = 8000
 
     @property
     def is_development(self) -> bool:
