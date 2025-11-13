@@ -38,11 +38,12 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost:5173",
         "http://localhost:8080",
+        "*",
     ]
 
     # Server
     host: str = "0.0.0.0"
-    port: int = 8000
+    port: int = 5000
 
     @property
     def is_development(self) -> bool:
