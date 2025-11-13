@@ -1,0 +1,159 @@
+"""Media processing schemas."""
+
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field
+
+from app.models.media_file import MediaType
+
+
+class MediaFileBase(BaseModel):
+    """Base schema for media file."""
+
+    url: str = Field(..., min_length=1, max_length=2000)
+    type: MediaType
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class MediaFileCreate(MediaFileBase):
+    """Schema for creating a media file."""
+
+    project_id: str
+
+
+class MediaFileResponse(MediaFileBase):
+    """Schema for media file response."""
+
+    id: str
+    project_id: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# Video Processing Schemas
+class VideoTrimRequest(BaseModel):
+    """Request schema for video trimming."""
+
+    input_url: str = Field(..., min_length=1)
+    start_time: float = Field(..., ge=0, description="Start time in seconds")
+    end_time: float = Field(..., gt=0, description="End time in seconds")
+    project_id: Optional[str] = None
+
+
+class VideoTrimResponse(BaseModel):
+    """Response schema for video trimming."""
+
+    output_url: str
+    duration: float
+    saved_media_id: Optional[str] = None
+
+
+class VideoCaptionsRequest(BaseModel):
+    """Request schema for video captions."""
+
+    input_url: str = Field(..., min_length=1)
+
+
+class VideoCaptionsResponse(BaseModel):
+    """Response schema for video captions."""
+
+    srt_content: str
+    caption_count: int
+
+
+class VideoResizeRequest(BaseModel):
+    """Request schema for video resizing."""
+
+    input_url: str = Field(..., min_length=1)
+    aspect_ratio: str = Field(..., description="e.g., 16:9, 9:16, 1:1")
+    project_id: Optional[str] = None
+
+
+class VideoResizeResponse(BaseModel):
+    """Response schema for video resizing."""
+
+    output_url: str
+    aspect_ratio: str
+    saved_media_id: Optional[str] = None
+
+
+class VideoShortsRequest(BaseModel):
+    """Request schema for generating shorts."""
+
+    input_url: str = Field(..., min_length=1)
+    count: int = Field(3, ge=1, le=10)
+    project_id: Optional[str] = None
+
+
+class VideoShortsResponse(BaseModel):
+    """Response schema for generating shorts."""
+
+    clips: List[Dict[str, Any]]
+    saved_media_ids: Optional[List[str]] = None
+
+
+# Audio Processing Schemas
+class AudioCleanupRequest(BaseModel):
+    """Request schema for audio cleanup."""
+
+    input_url: str = Field(..., min_length=1)
+    project_id: Optional[str] = None
+
+
+class AudioCleanupResponse(BaseModel):
+    """Response schema for audio cleanup."""
+
+    output_url: str
+    saved_media_id: Optional[str] = None
+
+
+class AudioPitchShiftRequest(BaseModel):
+    """Request schema for audio pitch shifting."""
+
+    input_url: str = Field(..., min_length=1)
+    semitones: int = Field(..., ge=-12, le=12)
+    project_id: Optional[str] = None
+
+
+class AudioPitchShiftResponse(BaseModel):
+    """Response schema for audio pitch shifting."""
+
+    output_url: str
+    semitones: int
+    saved_media_id: Optional[str] = None
+
+
+class AudioTempoShiftRequest(BaseModel):
+    """Request schema for audio tempo shifting."""
+
+    input_url: str = Field(..., min_length=1)
+    percent: int = Field(
+        ..., ge=50, le=200, description="Tempo percentage (100 = no change)"
+    )
+    project_id: Optional[str] = None
+
+
+class AudioTempoShiftResponse(BaseModel):
+    """Response schema for audio tempo shifting."""
+
+    output_url: str
+    tempo_percent: int
+    saved_media_id: Optional[str] = None
+
+
+class AudioExtractRequest(BaseModel):
+    """Request schema for audio extraction from video."""
+
+    input_url: str = Field(..., min_length=1)
+    project_id: Optional[str] = None
+
+
+class AudioExtractResponse(BaseModel):
+    """Response schema for audio extraction."""
+
+    output_url: str
+    duration: float
+    saved_media_id: Optional[str] = None
