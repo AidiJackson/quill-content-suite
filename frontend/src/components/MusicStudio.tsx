@@ -1,264 +1,290 @@
+import { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Textarea } from './ui/textarea';
-import { Slider } from './ui/slider';
-import { Play, Download, Upload, Layers, Mic, Music } from 'lucide-react';
+import { Input } from './ui/input';
+import { Play, Music, Copy, Loader2, Check, ExternalLink } from 'lucide-react';
 import { Badge } from './ui/badge';
+import { toast } from 'sonner';
+import apiClient from '@/lib/apiClient';
+import type { GenerateTrackRequest, GenerateTrackResponse } from '@/lib/types';
 
 export function MusicStudio() {
+  const [genre, setGenre] = useState('trap');
+  const [mood, setMood] = useState('energetic');
+  const [tempoBpm, setTempoBpm] = useState<string>('');
+  const [referenceText, setReferenceText] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [song, setSong] = useState<GenerateTrackResponse | null>(null);
+
+  const handleGenerate = async () => {
+    if (!genre || !mood) {
+      toast.error('Please select genre and mood');
+      return;
+    }
+
+    try {
+      setGenerating(true);
+
+      const request: GenerateTrackRequest = {
+        genre,
+        mood,
+        tempo_bpm: tempoBpm ? parseInt(tempoBpm) : undefined,
+        reference_text: referenceText || undefined,
+      };
+
+      const result = await apiClient.music.generateTrack(request);
+      setSong(result);
+
+      toast.success('Song generated!', {
+        description: `"${result.title}" is ready`,
+      });
+    } catch (error: any) {
+      console.error('Failed to generate song:', error);
+      toast.error('Failed to generate song', {
+        description: error.detail || error.message || 'Please try again',
+      });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const copyAllLyrics = () => {
+    if (!song) return;
+
+    const allLyrics = song.sections
+      .map((section) => `[${section.name}]\n${section.lyrics}`)
+      .join('\n\n');
+
+    navigator.clipboard.writeText(allLyrics);
+    toast.success('Lyrics copied to clipboard');
+  };
+
+  const playDemo = () => {
+    if (!song) return;
+    window.open(song.fake_audio_url, '_blank');
+    toast.info('Audio playback not yet implemented', {
+      description: 'Real audio engine coming soon',
+    });
+  };
+
   return (
-    <div className="p-8 space-y-8">
-      {/* AI Music Playground */}
-      <div>
-        <h4 className="text-slate-900 mb-6">AI Music Playground</h4>
-        
-        <div className="grid grid-cols-3 gap-8">
-          {/* Left - Controls */}
-          <div className="col-span-2 space-y-6">
-            <Card className="p-6 bg-white border-slate-200 shadow-sm">
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <Label htmlFor="genre" className="text-sm text-slate-700">Genre</Label>
-                  <Select defaultValue="trap">
-                    <SelectTrigger id="genre" className="mt-1.5">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="trap">Trap</SelectItem>
-                      <SelectItem value="drill">Drill</SelectItem>
-                      <SelectItem value="afrobeat">Afrobeat</SelectItem>
-                      <SelectItem value="lofi">Lo-fi</SelectItem>
-                      <SelectItem value="pop">Pop</SelectItem>
-                      <SelectItem value="edm">EDM</SelectItem>
-                      <SelectItem value="rnb">R&B</SelectItem>
-                      <SelectItem value="hiphop">Hip Hop</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="mood" className="text-sm text-slate-700">Mood</Label>
-                  <Select defaultValue="energetic">
-                    <SelectTrigger id="mood" className="mt-1.5">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="dark">Dark</SelectItem>
-                      <SelectItem value="energetic">Energetic</SelectItem>
-                      <SelectItem value="emotional">Emotional</SelectItem>
-                      <SelectItem value="dreamy">Dreamy</SelectItem>
-                      <SelectItem value="uplifting">Uplifting</SelectItem>
-                      <SelectItem value="chill">Chill</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="col-span-2">
-                  <Label className="text-sm text-slate-700 mb-2 block">Upload Sample/Loop (Optional)</Label>
-                  <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-slate-400 transition-colors cursor-pointer">
-                    <Upload className="w-8 h-8 mx-auto text-slate-400 mb-2" />
-                    <p className="text-sm text-slate-600">Click to upload or drag & drop</p>
-                    <p className="text-xs text-slate-500 mt-1">MP3, WAV up to 10MB</p>
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="text-sm text-slate-700 mb-3 block">Tempo (BPM)</Label>
-                  <div className="px-2">
-                    <Slider defaultValue={[128]} min={60} max={180} step={1} />
-                    <div className="flex justify-between mt-2">
-                      <span className="text-xs text-slate-500">60</span>
-                      <span className="text-sm text-slate-900">128 BPM</span>
-                      <span className="text-xs text-slate-500">180</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="text-sm text-slate-700 mb-3 block">Intensity</Label>
-                  <div className="px-2">
-                    <Slider defaultValue={[75]} min={0} max={100} step={1} />
-                    <div className="flex justify-between mt-2">
-                      <span className="text-xs text-slate-500">Low</span>
-                      <span className="text-sm text-slate-900">75%</span>
-                      <span className="text-xs text-slate-500">High</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Button className="w-full mt-6 bg-slate-900 hover:bg-slate-800">
-                <Music className="w-4 h-4 mr-2" />
-                Generate Track
-              </Button>
-            </Card>
-          </div>
-
-          {/* Right - Output Preview */}
-          <div>
-            <Card className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200 shadow-sm">
-              <div className="flex items-center gap-2 mb-4">
-                <Music className="w-5 h-5 text-purple-600" />
-                <h5 className="text-slate-900">Generated Track</h5>
-              </div>
-
-              <div className="p-4 bg-white rounded-lg mb-4">
-                <p className="text-sm text-slate-900 mb-1">Untitled Track 001</p>
-                <div className="flex items-center gap-2 text-xs text-slate-600">
-                  <Badge variant="secondary" className="bg-purple-100 text-purple-700">Trap</Badge>
-                  <span>•</span>
-                  <span>3:24</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Button variant="outline" className="w-full">
-                  <Play className="w-4 h-4 mr-2" />
-                  Play Preview
-                </Button>
-                <Button variant="outline" className="w-full">
-                  <Download className="w-4 h-4 mr-2" />
-                  Download
-                </Button>
-                <Button variant="outline" className="w-full">
-                  <Layers className="w-4 h-4 mr-2" />
-                  View Stems
-                </Button>
-              </div>
-            </Card>
-
-            <Card className="p-5 bg-blue-50 border-blue-200 mt-4">
-              <p className="text-xs text-blue-900">
-                <strong>Pro Tip:</strong> Upload a sample loop to guide the AI's creative direction and maintain your signature sound.
-              </p>
-            </Card>
-          </div>
-        </div>
-      </div>
-
-      {/* Lyrics & Vocals Studio */}
-      <div>
-        <h4 className="text-slate-900 mb-6">Lyrics & Vocals Studio</h4>
-
-        <div className="grid grid-cols-2 gap-8">
-          {/* Left - Lyrics */}
+    <div className="p-8">
+      <div className="grid grid-cols-2 gap-8">
+        {/* Left Column - Track Settings */}
+        <div className="space-y-6">
           <Card className="p-6 bg-white border-slate-200 shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-6">
               <Music className="w-5 h-5 text-blue-600" />
-              <h5 className="text-slate-900">Lyrics Generation</h5>
+              <h4 className="text-slate-900">Track Settings</h4>
             </div>
 
             <div className="space-y-4">
               <div>
-                <Label htmlFor="lyrics-input" className="text-sm text-slate-700">Song Concept or Starting Lyric</Label>
-                <Textarea
-                  id="lyrics-input"
-                  placeholder="Describe your song or paste a starting lyric..."
-                  className="mt-2 min-h-[200px] resize-none"
-                  defaultValue="A song about chasing dreams in the city lights, overcoming struggles, and staying true to yourself..."
-                />
-              </div>
-
-              <Button className="w-full bg-slate-900 hover:bg-slate-800">
-                Generate Full Lyrics
-              </Button>
-            </div>
-
-            <div className="mt-6 pt-6 border-t border-slate-200">
-              <h6 className="text-sm text-slate-700 mb-3">Alternative Hooks</h6>
-              <div className="space-y-2">
-                {[
-                  'City lights, they shine so bright, chasing dreams into the night',
-                  'From the bottom to the top, never gonna let it stop',
-                  'Breaking through the darkness, finding my own way',
-                ].map((hook, index) => (
-                  <div key={index} className="p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer">
-                    <p className="text-sm text-slate-700">{hook}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Card>
-
-          {/* Right - Vocals */}
-          <Card className="p-6 bg-white border-slate-200 shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <Mic className="w-5 h-5 text-purple-600" />
-              <h5 className="text-slate-900">Vocal Generation</h5>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <Label htmlFor="voice-type" className="text-sm text-slate-700">Voice Type</Label>
-                <Select defaultValue="male-rnb">
-                  <SelectTrigger id="voice-type" className="mt-1.5">
+                <Label htmlFor="genre" className="text-sm text-slate-700">Genre *</Label>
+                <Select value={genre} onValueChange={setGenre}>
+                  <SelectTrigger id="genre" className="mt-1.5">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="male-rnb">Male R&B</SelectItem>
-                    <SelectItem value="female-pop">Female Pop</SelectItem>
-                    <SelectItem value="male-rap">Male Rap</SelectItem>
-                    <SelectItem value="female-rap">Female Rap</SelectItem>
-                    <SelectItem value="soft-male">Soft Male</SelectItem>
-                    <SelectItem value="soft-female">Soft Female</SelectItem>
-                    <SelectItem value="choir">Choir</SelectItem>
+                    <SelectItem value="trap">Trap</SelectItem>
+                    <SelectItem value="drill">Drill</SelectItem>
+                    <SelectItem value="afrobeat">Afrobeat</SelectItem>
+                    <SelectItem value="lofi">Lo-fi</SelectItem>
+                    <SelectItem value="pop">Pop</SelectItem>
+                    <SelectItem value="edm">EDM</SelectItem>
+                    <SelectItem value="rnb">R&B</SelectItem>
+                    <SelectItem value="hiphop">Hip Hop</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
-                <Label className="text-sm text-slate-700 mb-3 block">Emotion</Label>
-                <div className="px-2">
-                  <Slider defaultValue={[60]} min={0} max={100} step={1} />
-                  <div className="flex justify-between mt-2">
-                    <span className="text-xs text-slate-500">Calm</span>
-                    <span className="text-sm text-slate-900">Balanced</span>
-                    <span className="text-xs text-slate-500">Intense</span>
-                  </div>
-                </div>
+                <Label htmlFor="mood" className="text-sm text-slate-700">Mood *</Label>
+                <Select value={mood} onValueChange={setMood}>
+                  <SelectTrigger id="mood" className="mt-1.5">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="dark">Dark</SelectItem>
+                    <SelectItem value="energetic">Energetic</SelectItem>
+                    <SelectItem value="emotional">Emotional</SelectItem>
+                    <SelectItem value="dreamy">Dreamy</SelectItem>
+                    <SelectItem value="uplifting">Uplifting</SelectItem>
+                    <SelectItem value="chill">Chill</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
-                <Label className="text-sm text-slate-700 mb-3 block">Pitch</Label>
-                <div className="px-2">
-                  <Slider defaultValue={[50]} min={0} max={100} step={1} />
-                  <div className="flex justify-between mt-2">
-                    <span className="text-xs text-slate-500">Low</span>
-                    <span className="text-sm text-slate-900">Natural</span>
-                    <span className="text-xs text-slate-500">High</span>
-                  </div>
-                </div>
+                <Label htmlFor="tempo" className="text-sm text-slate-700">
+                  Tempo (BPM) <span className="text-slate-500">- Optional</span>
+                </Label>
+                <Input
+                  id="tempo"
+                  type="number"
+                  min="60"
+                  max="200"
+                  placeholder="e.g., 128"
+                  className="mt-1.5"
+                  value={tempoBpm}
+                  onChange={(e) => setTempoBpm(e.target.value)}
+                />
               </div>
 
               <div>
-                <Label className="text-sm text-slate-700 mb-3 block">Energy</Label>
-                <div className="px-2">
-                  <Slider defaultValue={[70]} min={0} max={100} step={1} />
-                  <div className="flex justify-between mt-2">
-                    <span className="text-xs text-slate-500">Mellow</span>
-                    <span className="text-sm text-slate-900">Energetic</span>
-                    <span className="text-xs text-slate-500">Max</span>
-                  </div>
-                </div>
+                <Label htmlFor="reference" className="text-sm text-slate-700">
+                  Describe your song <span className="text-slate-500">- Optional</span>
+                </Label>
+                <Textarea
+                  id="reference"
+                  placeholder="e.g., Something like a chilled night drive through neon-lit streets..."
+                  className="mt-1.5 min-h-[100px] resize-none"
+                  value={referenceText}
+                  onChange={(e) => setReferenceText(e.target.value)}
+                />
               </div>
 
-              <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white">
-                <Mic className="w-4 h-4 mr-2" />
-                Generate Vocal
+              <Button
+                className="w-full bg-slate-900 hover:bg-slate-800 mt-2"
+                onClick={handleGenerate}
+                disabled={generating}
+              >
+                {generating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating Song...
+                  </>
+                ) : (
+                  <>
+                    <Music className="w-4 h-4 mr-2" />
+                    Generate Song
+                  </>
+                )}
               </Button>
-
-              <div className="pt-4 border-t border-slate-200">
-                <p className="text-sm text-slate-700 mb-2">Output Options:</p>
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="secondary" className="bg-purple-50 text-purple-700">Acapella</Badge>
-                  <Badge variant="secondary" className="bg-purple-50 text-purple-700">Harmonies</Badge>
-                  <Badge variant="secondary" className="bg-purple-50 text-purple-700">Backing Vocals</Badge>
-                </div>
-              </div>
             </div>
           </Card>
+
+          {song && (
+            <Card className="p-5 bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
+              <h5 className="text-slate-900 mb-2 font-medium">Song Info</h5>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600">Track ID:</span>
+                  <code className="text-xs bg-white px-2 py-1 rounded">{song.track_id}</code>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600">Genre:</span>
+                  <Badge variant="secondary" className="capitalize">{song.genre}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600">Mood:</span>
+                  <Badge variant="secondary" className="capitalize">{song.mood}</Badge>
+                </div>
+                {song.tempo_bpm && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600">Tempo:</span>
+                    <span className="font-medium">{song.tempo_bpm} BPM</span>
+                  </div>
+                )}
+                <div className="pt-2 border-t border-purple-200">
+                  <p className="text-xs text-purple-900">
+                    Audio is placeholder for now – real audio engine coming soon.
+                  </p>
+                </div>
+              </div>
+            </Card>
+          )}
+        </div>
+
+        {/* Right Column - Song Blueprint */}
+        <div className="space-y-6">
+          {!song ? (
+            <Card className="p-12 bg-white border-slate-200 shadow-sm text-center">
+              <Music className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+              <h5 className="text-slate-900 mb-2">No song generated yet</h5>
+              <p className="text-sm text-slate-600">
+                Configure your settings and click "Generate Song" to create a full song blueprint with lyrics
+              </p>
+            </Card>
+          ) : (
+            <>
+              <Card className="p-6 bg-white border-slate-200 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h4 className="text-slate-900 font-semibold">{song.title}</h4>
+                    <p className="text-sm text-slate-600 mt-1">
+                      {song.vocal_style.gender.charAt(0).toUpperCase() + song.vocal_style.gender.slice(1)} vocals •{' '}
+                      {song.vocal_style.tone} •{' '}
+                      {song.vocal_style.energy} energy
+                    </p>
+                  </div>
+                  <Badge className="bg-green-50 text-green-700">
+                    <Check className="w-3 h-3 mr-1" />
+                    Generated
+                  </Badge>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Hook */}
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <Label className="text-xs text-blue-900 font-semibold uppercase">Hook</Label>
+                    <p className="text-sm text-slate-900 mt-1 italic">{song.hook}</p>
+                  </div>
+
+                  {/* Chorus */}
+                  <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                    <Label className="text-xs text-purple-900 font-semibold uppercase">Chorus</Label>
+                    <p className="text-sm text-slate-900 mt-1 whitespace-pre-wrap">{song.chorus}</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 mt-6">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={playDemo}
+                  >
+                    <Play className="w-4 h-4 mr-2" />
+                    Play Demo
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={copyAllLyrics}
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy Lyrics
+                  </Button>
+                </div>
+              </Card>
+
+              {/* Song Structure */}
+              <Card className="p-6 bg-white border-slate-200 shadow-sm">
+                <h5 className="text-slate-900 mb-4 font-medium">Song Structure</h5>
+                <div className="space-y-4 max-h-[600px] overflow-y-auto">
+                  {song.sections.map((section, idx) => (
+                    <div key={idx} className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <h6 className="text-slate-900 font-medium">{section.name}</h6>
+                        <Badge variant="secondary" className="text-xs">
+                          {section.bars} bars
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-slate-600 mb-3">{section.description}</p>
+                      <div className="p-3 bg-white rounded border border-slate-200">
+                        <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                          {section.lyrics}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </>
+          )}
         </div>
       </div>
     </div>
