@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
+import { ScrollArea } from './ui/scroll-area';
 import { FileText, Mail, MessageSquare, Zap, Loader2, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import apiClient from '@/lib/apiClient';
@@ -107,9 +108,11 @@ export function WrittenStudio() {
       return (
         <div className="p-4 bg-white rounded-lg border border-slate-200 space-y-3">
           <h5 className="text-slate-900 font-semibold">{generatedContent.title}</h5>
-          <div className="text-sm text-slate-700 leading-relaxed line-clamp-6">
-            {generatedContent.content.substring(0, 400)}...
-          </div>
+          <ScrollArea className="h-[420px] pr-2">
+            <div className="whitespace-pre-wrap text-sm leading-relaxed">
+              {generatedContent.content}
+            </div>
+          </ScrollArea>
           <div className="flex items-center justify-between pt-2 border-t border-slate-100">
             <p className="text-xs text-slate-500">{generatedContent.word_count} words</p>
             <Badge variant="secondary" className="bg-green-50 text-green-700">
@@ -126,14 +129,19 @@ export function WrittenStudio() {
       return (
         <div className="p-4 bg-white rounded-lg border border-slate-200 space-y-3">
           <h5 className="text-slate-900 font-semibold">{generatedContent.subject}</h5>
-          <p className="text-sm text-slate-600">{generatedContent.preview_text}</p>
-          <div className="space-y-2">
-            {generatedContent.sections.slice(0, 2).map((section: any, idx: number) => (
-              <div key={idx} className="text-xs text-slate-600">
-                • {section.heading}
+          <ScrollArea className="h-[420px] pr-2">
+            <div className="space-y-3 pr-4">
+              <p className="text-sm text-slate-600">{generatedContent.preview_text}</p>
+              <div className="space-y-2">
+                {generatedContent.sections.map((section: any, idx: number) => (
+                  <div key={idx} className="text-xs text-slate-600">
+                    <p className="font-semibold text-slate-700">{section.heading}</p>
+                    <p className="mt-1">{section.body}</p>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          </ScrollArea>
           <div className="flex items-center justify-between pt-2 border-t border-slate-100">
             <p className="text-xs text-slate-500">{generatedContent.word_count} words</p>
             <Badge variant="secondary" className="bg-green-50 text-green-700">
@@ -156,9 +164,11 @@ export function WrittenStudio() {
             </Badge>
             <p className="text-xs text-slate-500">{firstPost.character_count} chars</p>
           </div>
-          <p className="text-sm text-slate-700 leading-relaxed">
-            {firstPost.content}
-          </p>
+          <ScrollArea className="h-[420px] pr-2">
+            <div className="whitespace-pre-wrap text-sm text-slate-700 leading-relaxed pr-4">
+              {firstPost.content}
+            </div>
+          </ScrollArea>
           {firstPost.hashtags && firstPost.hashtags.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {firstPost.hashtags.map((tag: string, idx: number) => (
