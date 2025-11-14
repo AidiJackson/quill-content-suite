@@ -321,18 +321,40 @@ export interface DashboardSummary {
   tracks_in_production: number;
 }
 
-// ==================== Music Studio Types (Stub) ====================
+// ==================== Music Studio Types ====================
+export interface VocalStyle {
+  gender: string;
+  tone: string;
+  energy: string;
+}
+
+export interface MusicSection {
+  name: string;
+  bars: number;
+  description: string;
+  lyrics: string;
+}
+
 export interface GenerateTrackRequest {
-  prompt?: string;
-  genre?: string;
-  duration?: number;
+  genre: string;
+  mood: string;
+  tempo_bpm?: number;
+  reference_text?: string;
+  sections?: string[];
   project_id?: string;
 }
 
 export interface GenerateTrackResponse {
-  track_url: string;
-  duration: number;
-  metadata: Record<string, any>;
+  track_id: string;
+  title: string;
+  genre: string;
+  mood: string;
+  tempo_bpm?: number;
+  vocal_style: VocalStyle;
+  hook: string;
+  chorus: string;
+  sections: MusicSection[];
+  fake_audio_url: string;
   saved_media_id?: string;
 }
 

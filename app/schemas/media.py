@@ -178,20 +178,46 @@ class AIVideoGenerateResponse(BaseModel):
     saved_media_id: Optional[str] = None
 
 
-# Music Generation Schemas (Stub)
+# Music Generation Schemas
+class VocalStyle(BaseModel):
+    """Vocal style configuration."""
+
+    gender: str = Field(..., description="Vocal gender: male, female, mixed, auto")
+    tone: str = Field(..., description="Vocal tone: emotional, aggressive, smooth, etc.")
+    energy: str = Field(..., description="Energy level: low, medium, high")
+
+
+class MusicSection(BaseModel):
+    """Song section structure."""
+
+    name: str = Field(..., description="Section name (e.g., Intro, Verse 1, Chorus)")
+    bars: int = Field(..., ge=1, le=64, description="Number of bars in this section")
+    description: str = Field(..., description="Musical description of what happens")
+    lyrics: str = Field(..., description="Lyrics for this section")
+
+
 class MusicGenerateRequest(BaseModel):
     """Request schema for music generation."""
 
-    prompt: Optional[str] = Field(None, description="Text prompt for music generation")
-    genre: Optional[str] = Field(None, description="Music genre (e.g., jazz, rock, electronic)")
-    duration: Optional[int] = Field(60, ge=10, le=300, description="Duration in seconds")
+    genre: str = Field(..., description="Music genre (e.g., trap, drill, afrobeat, lofi, pop, edm, rnb, hiphop)")
+    mood: str = Field(..., description="Mood (e.g., dark, energetic, emotional, dreamy, uplifting, chill)")
+    tempo_bpm: Optional[int] = Field(None, ge=60, le=200, description="Tempo in BPM")
+    reference_text: Optional[str] = Field(None, description="Reference text or song idea")
+    sections: Optional[List[str]] = Field(None, description="Desired sections (e.g., intro, verse, chorus)")
     project_id: Optional[str] = None
 
 
 class MusicGenerateResponse(BaseModel):
     """Response schema for music generation."""
 
-    track_url: str
-    duration: int
-    metadata: Dict[str, Any]
+    track_id: str = Field(..., description="Unique track identifier")
+    title: str = Field(..., description="Generated song title")
+    genre: str
+    mood: str
+    tempo_bpm: Optional[int] = None
+    vocal_style: VocalStyle
+    hook: str = Field(..., description="Memorable hook line")
+    chorus: str = Field(..., description="Main chorus lyrics")
+    sections: List[MusicSection] = Field(..., description="Song structure with lyrics")
+    fake_audio_url: str = Field(..., description="Placeholder audio URL")
     saved_media_id: Optional[str] = None
