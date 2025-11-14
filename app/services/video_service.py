@@ -151,6 +151,47 @@ For now, this is a placeholder for MVP testing.
             "saved_media_ids": saved_media_ids if saved_media_ids else None,
         }
 
+    def generate_ai_video(
+        self,
+        prompt: str,
+        style: Optional[str] = None,
+        duration: int = 30,
+        project_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Generate AI video from text prompt (STUB implementation for MVP).
+
+        TODO: Replace with real AI video generation once backend is upgraded.
+        """
+        logger.info(f"Generating AI video with prompt: {prompt[:50]}...")
+
+        # Fake output URL
+        output_url = f"https://fake-storage.example.com/ai_video_{hash(prompt) % 10000}.mp4"
+
+        metadata = {
+            "operation": "ai_video_generation",
+            "prompt": prompt,
+            "style": style or "default",
+            "duration": duration,
+            "generator": "stub",
+        }
+
+        saved_media_id = None
+        if project_id and self.db:
+            saved_media_id = self._save_media_file(
+                project_id=project_id,
+                url=output_url,
+                media_type=MediaType.VIDEO,
+                meta=metadata,
+            )
+
+        return {
+            "video_url": output_url,
+            "duration": duration,
+            "metadata": metadata,
+            "saved_media_id": saved_media_id,
+        }
+
     def _save_media_file(
         self,
         project_id: str,

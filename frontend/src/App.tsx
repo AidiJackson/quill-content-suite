@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Toaster } from 'sonner';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { Dashboard } from './components/Dashboard';
@@ -49,16 +50,19 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50">
-      <Sidebar currentView={currentView} onNavigate={setCurrentView} />
-      
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <TopBar pageTitle={getPageTitle()} />
-        
-        <main className="flex-1 overflow-y-auto">
-          {renderView()}
-        </main>
+    <>
+      <Toaster position="top-right" richColors />
+      <div className="flex h-screen bg-slate-50">
+        <Sidebar currentView={currentView} onNavigate={setCurrentView} />
+
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <TopBar pageTitle={getPageTitle()} />
+
+          <main className="flex-1 overflow-y-auto">
+            {renderView()}
+          </main>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -157,3 +157,41 @@ class AudioExtractResponse(BaseModel):
     output_url: str
     duration: float
     saved_media_id: Optional[str] = None
+
+
+# AI Video Generation Schemas (Stub)
+class AIVideoGenerateRequest(BaseModel):
+    """Request schema for AI video generation."""
+
+    prompt: str = Field(..., min_length=1, max_length=1000)
+    style: Optional[str] = Field(None, description="Video style (e.g., realistic, animated)")
+    duration: Optional[int] = Field(30, ge=5, le=300, description="Duration in seconds")
+    project_id: Optional[str] = None
+
+
+class AIVideoGenerateResponse(BaseModel):
+    """Response schema for AI video generation."""
+
+    video_url: str
+    duration: int
+    metadata: Dict[str, Any]
+    saved_media_id: Optional[str] = None
+
+
+# Music Generation Schemas (Stub)
+class MusicGenerateRequest(BaseModel):
+    """Request schema for music generation."""
+
+    prompt: Optional[str] = Field(None, description="Text prompt for music generation")
+    genre: Optional[str] = Field(None, description="Music genre (e.g., jazz, rock, electronic)")
+    duration: Optional[int] = Field(60, ge=10, le=300, description="Duration in seconds")
+    project_id: Optional[str] = None
+
+
+class MusicGenerateResponse(BaseModel):
+    """Response schema for music generation."""
+
+    track_url: str
+    duration: int
+    metadata: Dict[str, Any]
+    saved_media_id: Optional[str] = None

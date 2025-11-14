@@ -3,7 +3,8 @@
 from fastapi import APIRouter
 
 from app.api.deps import CurrentUser, DBSession
-from app.schemas.media import (VideoCaptionsRequest, VideoCaptionsResponse,
+from app.schemas.media import (AIVideoGenerateRequest, AIVideoGenerateResponse,
+                               VideoCaptionsRequest, VideoCaptionsResponse,
                                VideoResizeRequest, VideoResizeResponse,
                                VideoShortsRequest, VideoShortsResponse,
                                VideoTrimRequest, VideoTrimResponse)
@@ -74,6 +75,30 @@ def generate_shorts(
     result = service.generate_shorts(
         input_url=request.input_url,
         count=request.count,
+        project_id=request.project_id,
+    )
+
+    return result
+
+
+@router.post("/generate-ai", response_model=AIVideoGenerateResponse)
+def generate_ai_video(
+    request: AIVideoGenerateRequest,
+    db: DBSession,
+    current_user: CurrentUser,
+):
+    """
+    Generate an AI video from a text prompt (STUB).
+
+    TODO: Replace with real AI video generation once backend is upgraded.
+    """
+    service = VideoService(db)
+
+    # Stub implementation - returns fake data
+    result = service.generate_ai_video(
+        prompt=request.prompt,
+        style=request.style,
+        duration=request.duration or 30,
         project_id=request.project_id,
     )
 
