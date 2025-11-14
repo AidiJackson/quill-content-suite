@@ -1,16 +1,58 @@
+import { useEffect, useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { FileText, Mail, MessageSquare, Video, TrendingUp, Linkedin, Twitter, Music, Sparkles } from 'lucide-react';
+import { FileText, Mail, MessageSquare, Video, TrendingUp, Linkedin, Twitter, Music, Sparkles, Loader2 } from 'lucide-react';
 import { Badge } from './ui/badge';
+import { toast } from 'sonner';
+import apiClient from '@/lib/apiClient';
+import type { DashboardSummary, Project } from '@/lib/types';
 
 export function Dashboard() {
-  const kpis = [
-    { label: 'Active Projects', value: '12', change: '+3 this month' },
-    { label: 'Pieces This Week', value: '38', change: '+14 vs last week' },
-    { label: 'Avg. Virality Score', value: '87', change: '+5 points' },
-    { label: 'Video Clips Generated', value: '156', change: '+42 this week' },
-    { label: 'Tracks in Production', value: '8', change: '+3 new' },
-  ];
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch dashboard summary and recent projects in parallel
+        const [summaryData, projectsData] = await Promise.all([
+          apiClient.dashboard.getSummary(),
+          apiClient.projects.list({ limit: 4 }),
+        ]);
+
+        setSummary(summaryData);
+        setProjects(projectsData);
+      } catch (error: any) {
+        console.error('Failed to fetch dashboard data:', error);
+        toast.error('Failed to load dashboard data', {
+          description: error.detail || error.message || 'Please try again',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const kpis = summary
+    ? [
+        { label: 'Active Projects', value: summary.active_projects.toString(), change: 'Total projects' },
+        { label: 'Pieces This Week', value: summary.items_created_this_week.toString(), change: 'Last 7 days' },
+        { label: 'Avg. Virality Score', value: summary.avg_virality_score.toFixed(1), change: 'All content' },
+        { label: 'Video Clips Generated', value: summary.video_clips_generated.toString(), change: 'Total clips' },
+        { label: 'Tracks in Production', value: summary.tracks_in_production.toString(), change: 'Total tracks' },
+      ]
+    : [
+        { label: 'Active Projects', value: '—', change: 'Loading...' },
+        { label: 'Pieces This Week', value: '—', change: 'Loading...' },
+        { label: 'Avg. Virality Score', value: '—', change: 'Loading...' },
+        { label: 'Video Clips Generated', value: '—', change: 'Loading...' },
+        { label: 'Tracks in Production', value: '—', change: 'Loading...' },
+      ];
 
   const quickActions = [
     { label: 'New Blog', icon: FileText, color: 'blue' },
@@ -20,36 +62,19 @@ export function Dashboard() {
     { label: 'New Track', icon: Music, color: 'pink' },
   ];
 
-  const recentProjects = [
-    {
-      name: 'Q1 Product Launch',
-      types: ['blog', 'video', 'social', 'track'],
-      channels: ['LinkedIn', 'Twitter'],
-      updated: '2 hours ago',
-      viralityScore: 92,
-    },
-    {
-      name: 'Personal Brand - Week 45',
-      types: ['newsletter', 'social', 'video'],
-      channels: ['LinkedIn'],
-      updated: '5 hours ago',
-      viralityScore: 78,
-    },
-    {
-      name: 'Podcast Promotion',
-      types: ['video', 'social', 'blog'],
-      channels: ['Twitter', 'LinkedIn'],
-      updated: '1 day ago',
-      viralityScore: 85,
-    },
-    {
-      name: 'Music Video Campaign',
-      types: ['track', 'video', 'social'],
-      channels: ['Twitter'],
-      updated: '2 days ago',
-      viralityScore: 89,
-    },
-  ];
+  // Helper function to format relative time
+  const formatRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 60) return `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+  };
 
   const todaySuggestions = [
     {
@@ -125,60 +150,47 @@ export function Dashboard() {
       <div>
         <h4 className="text-slate-900 mb-4">Recent Projects</h4>
         <Card className="bg-white border-slate-200 shadow-sm">
-          <div className="overflow-hidden">
-            <table className="w-full">
-              <thead className="border-b border-slate-200">
-                <tr>
-                  <th className="text-left p-4 text-sm text-slate-600">Project Name</th>
-                  <th className="text-left p-4 text-sm text-slate-600">Type</th>
-                  <th className="text-left p-4 text-sm text-slate-600">Channels</th>
-                  <th className="text-left p-4 text-sm text-slate-600">Last Updated</th>
-                  <th className="text-left p-4 text-sm text-slate-600">Virality Score</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentProjects.map((project, index) => (
-                  <tr key={index} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
-                    <td className="p-4">
-                      <span className="text-slate-900">{project.name}</span>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex gap-2">
-                        {project.types.map((type, i) => (
-                          <div key={i} className="p-1.5 bg-slate-100 rounded text-slate-600">
-                            {getTypeIcon(type)}
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex gap-2">
-                        {project.channels.map((channel, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs bg-slate-100 text-slate-700">
-                            {channel === 'LinkedIn' ? <Linkedin className="w-3 h-3 mr-1" /> : <Twitter className="w-3 h-3 mr-1" />}
-                            {channel}
-                          </Badge>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="p-4 text-sm text-slate-600">{project.updated}</td>
-                    <td className="p-4">
-                      <Badge 
-                        className={`
-                          ${project.viralityScore >= 85 ? 'bg-green-50 text-green-700 border-green-200' : ''}
-                          ${project.viralityScore >= 70 && project.viralityScore < 85 ? 'bg-blue-50 text-blue-700 border-blue-200' : ''}
-                          ${project.viralityScore < 70 ? 'bg-slate-100 text-slate-700 border-slate-200' : ''}
-                        `}
-                      >
-                        <TrendingUp className="w-3 h-3 mr-1" />
-                        {project.viralityScore}
-                      </Badge>
-                    </td>
+          {loading ? (
+            <div className="p-12 flex items-center justify-center">
+              <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
+              <span className="ml-2 text-slate-600">Loading projects...</span>
+            </div>
+          ) : projects.length === 0 ? (
+            <div className="p-12 text-center">
+              <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <p className="text-slate-600">No projects yet</p>
+              <p className="text-sm text-slate-500 mt-1">Create your first project to get started</p>
+            </div>
+          ) : (
+            <div className="overflow-hidden">
+              <table className="w-full">
+                <thead className="border-b border-slate-200">
+                  <tr>
+                    <th className="text-left p-4 text-sm text-slate-600">Project Name</th>
+                    <th className="text-left p-4 text-sm text-slate-600">Description</th>
+                    <th className="text-left p-4 text-sm text-slate-600">Last Updated</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {projects.map((project) => (
+                    <tr key={project.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors cursor-pointer">
+                      <td className="p-4">
+                        <span className="text-slate-900 font-medium">{project.title}</span>
+                      </td>
+                      <td className="p-4">
+                        <span className="text-sm text-slate-600">
+                          {project.description || 'No description'}
+                        </span>
+                      </td>
+                      <td className="p-4 text-sm text-slate-600">
+                        {formatRelativeTime(project.updated_at)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </Card>
       </div>
 
