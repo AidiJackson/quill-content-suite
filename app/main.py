@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api.routes import audio, content, health, music, projects, summary, video, virality
+from app.api.routes import audio, content, health, music, projects, summary, video, virality, vocals
 from app.core.config import get_settings
 from app.core.logging import get_logger, setup_logging
 from app.db.init_db import init_db
@@ -64,6 +64,7 @@ app.include_router(virality.router, prefix="/api")
 app.include_router(video.router, prefix="/api")
 app.include_router(audio.router, prefix="/api")
 app.include_router(music.router, prefix="/api")
+app.include_router(vocals.router, prefix="/api")
 
 # Serve frontend static files in production
 frontend_build_path = Path(__file__).parent.parent / "frontend" / "build"

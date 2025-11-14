@@ -252,11 +252,18 @@ export const audio = {
     post<T.ExtractAudioRequest, T.ExtractAudioResponse>('/audio/extract', data),
 };
 
-// ==================== Music Studio (Stub) ====================
+// ==================== Music Studio ====================
 
 export const music = {
   generateTrack: (data: T.GenerateTrackRequest) =>
     post<T.GenerateTrackRequest, T.GenerateTrackResponse>('/music/generate', data),
+};
+
+// ==================== Vocal Generation ====================
+
+export const vocals = {
+  generate: (data: T.GenerateVocalsRequest) =>
+    post<T.GenerateVocalsRequest, T.GenerateVocalsResponse>('/vocals/generate', data),
 };
 
 // ==================== AI Video (Stub) ====================
@@ -277,6 +284,7 @@ const apiClient = {
   video,
   audio,
   music,
+  vocals,
   aiVideo,
 };
 
