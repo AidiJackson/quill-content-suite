@@ -221,3 +221,25 @@ class MusicGenerateResponse(BaseModel):
     sections: List[MusicSection] = Field(..., description="Song structure with lyrics")
     fake_audio_url: str = Field(..., description="Placeholder audio URL")
     saved_media_id: Optional[str] = None
+
+
+# Vocal Generation Schemas
+class VocalGenerateRequest(BaseModel):
+    """Request schema for vocal generation."""
+
+    track_id: Optional[str] = Field(None, description="Associated track ID")
+    lyrics: str = Field(..., min_length=1, description="Lyrics to sing")
+    vocal_style: VocalStyle = Field(..., description="Vocal style configuration")
+    tempo_bpm: Optional[int] = Field(None, ge=60, le=200, description="Tempo in BPM")
+    reference_text: Optional[str] = Field(None, description="Reference or context for vocal generation")
+
+
+class VocalGenerateResponse(BaseModel):
+    """Response schema for vocal generation."""
+
+    vocal_id: str = Field(..., description="Unique vocal rendering ID")
+    track_id: Optional[str] = Field(None, description="Associated track ID")
+    audio_url: str = Field(..., description="URL to generated audio file")
+    duration_seconds: Optional[int] = Field(None, description="Duration in seconds")
+    vocal_style: VocalStyle = Field(..., description="Vocal style used")
+    notes: Optional[str] = Field(None, description="Generation notes or metadata")

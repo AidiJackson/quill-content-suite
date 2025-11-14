@@ -358,6 +358,24 @@ export interface GenerateTrackResponse {
   saved_media_id?: string;
 }
 
+// ==================== Vocal Generation Types ====================
+export interface GenerateVocalsRequest {
+  track_id?: string;
+  lyrics: string;
+  vocal_style: VocalStyle;
+  tempo_bpm?: number;
+  reference_text?: string;
+}
+
+export interface GenerateVocalsResponse {
+  vocal_id: string;
+  track_id?: string;
+  audio_url: string;
+  duration_seconds?: number;
+  vocal_style: VocalStyle;
+  notes?: string;
+}
+
 // ==================== AI Video Types (Stub) ====================
 export interface GenerateAIVideoRequest {
   prompt: string;
