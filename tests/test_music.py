@@ -7,12 +7,11 @@ from pathlib import Path
 
 
 def test_generate_music_basic(client: TestClient):
-    """Test basic music generation with required fields."""
+    """Test basic premium music generation with artist influences."""
     response = client.post(
         "/api/music/generate",
         json={
-            "genre": "trap",
-            "mood": "dark",
+            "artist_influences": ["Depeche Mode"],
         },
         headers={"X-User-Id": "test-user"},
     )
@@ -23,8 +22,11 @@ def test_generate_music_basic(client: TestClient):
     # Check required fields
     assert "track_id" in data
     assert "title" in data
-    assert "genre" in data
+    assert "artist_influences" in data
+    assert "instruments" in data
+    assert "production_era" in data
     assert "mood" in data
+    assert "tempo_bpm" in data
     assert "vocal_style" in data
     assert "hook" in data
     assert "chorus" in data
@@ -33,6 +35,11 @@ def test_generate_music_basic(client: TestClient):
 
     # Check title is non-empty
     assert len(data["title"]) > 0
+
+    # Check artist influences
+    assert data["artist_influences"] == ["Depeche Mode"]
+    assert isinstance(data["instruments"], list)
+    assert len(data["instruments"]) > 0
 
     # Check at least 3 sections
     assert len(data["sections"]) >= 3
@@ -49,13 +56,13 @@ def test_generate_music_basic(client: TestClient):
 
 
 def test_generate_music_with_tempo(client: TestClient):
-    """Test music generation with custom tempo."""
+    """Test premium music generation with custom tempo."""
     response = client.post(
         "/api/music/generate",
         json={
-            "genre": "edm",
-            "mood": "energetic",
-            "tempo_bpm": 128,
+            "artist_influences": ["Pet Shop Boys"],
+            "mood": "sophisticated",
+            "tempo_bpm": 125,
         },
         headers={"X-User-Id": "test-user"},
     )
@@ -63,17 +70,18 @@ def test_generate_music_with_tempo(client: TestClient):
     assert response.status_code == 200
     data = response.json()
 
-    assert data["tempo_bpm"] == 128
+    assert data["tempo_bpm"] == 125
+    assert "Pet Shop Boys" in data["artist_influences"]
 
 
 def test_generate_music_with_reference(client: TestClient):
-    """Test music generation with reference text."""
+    """Test premium music generation with reference text."""
     response = client.post(
         "/api/music/generate",
         json={
-            "genre": "lofi",
-            "mood": "chill",
-            "reference_text": "Something like chilled night drive",
+            "artist_influences": ["Gary Numan"],
+            "mood": "dystopian",
+            "reference_text": "Something like a dystopian future cityscape",
         },
         headers={"X-User-Id": "test-user"},
     )
@@ -83,17 +91,18 @@ def test_generate_music_with_reference(client: TestClient):
 
     # Title should incorporate reference text
     assert len(data["title"]) > 0
+    assert "Gary Numan" in data["artist_influences"]
 
 
 def test_generate_music_with_custom_sections(client: TestClient):
-    """Test music generation with custom sections."""
+    """Test premium music generation with custom sections."""
     custom_sections = ["Intro", "Verse", "Chorus", "Outro"]
 
     response = client.post(
         "/api/music/generate",
         json={
-            "genre": "rnb",
-            "mood": "emotional",
+            "artist_influences": ["Tears for Fears"],
+            "mood": "emotive",
             "sections": custom_sections,
         },
         headers={"X-User-Id": "test-user"},
@@ -114,28 +123,30 @@ def test_generate_music_with_custom_sections(client: TestClient):
         assert section["bars"] > 0
 
 
-def test_generate_music_various_genres(client: TestClient):
-    """Test music generation with different genres."""
-    genres = ["trap", "drill", "afrobeat", "lofi", "pop", "edm", "rnb", "hiphop"]
+def test_generate_music_multiple_artists(client: TestClient):
+    """Test premium music generation with multiple artist influences."""
+    artists = ["Depeche Mode", "Gary Numan", "New Order"]
 
-    for genre in genres:
-        response = client.post(
-            "/api/music/generate",
-            json={
-                "genre": genre,
-                "mood": "energetic",
-            },
-            headers={"X-User-Id": "test-user"},
-        )
+    response = client.post(
+        "/api/music/generate",
+        json={
+            "artist_influences": artists,
+            "mood": "dark",
+        },
+        headers={"X-User-Id": "test-user"},
+    )
 
-        assert response.status_code == 200, f"Failed for genre: {genre}"
-        data = response.json()
-        assert data["genre"] == genre
+    assert response.status_code == 200
+    data = response.json()
+
+    # Check all artists are present
+    for artist in artists:
+        assert artist in data["artist_influences"]
 
 
 def test_generate_music_missing_required_fields(client: TestClient):
     """Test music generation with missing required fields."""
-    # Missing genre
+    # Missing artist_influences
     response = client.post(
         "/api/music/generate",
         json={
@@ -145,23 +156,13 @@ def test_generate_music_missing_required_fields(client: TestClient):
     )
     assert response.status_code == 422
 
-    # Missing mood
-    response = client.post(
-        "/api/music/generate",
-        json={
-            "genre": "trap",
-        },
-        headers={"X-User-Id": "test-user"},
-    )
-    assert response.status_code == 422
-
 
 def test_generate_music_deterministic(client: TestClient):
     """Test that the same inputs produce the same output."""
     request_data = {
-        "genre": "pop",
-        "mood": "uplifting",
-        "tempo_bpm": 120,
+        "artist_influences": ["Kraftwerk"],
+        "mood": "mechanical",
+        "tempo_bpm": 125,
     }
 
     # Make two requests with identical data
@@ -189,13 +190,13 @@ def test_generate_music_deterministic(client: TestClient):
 
 
 def test_procedural_audio_file_created(client: TestClient):
-    """Test that procedural audio files are actually created on disk."""
+    """Test that premium procedural audio files are actually created on disk."""
     response = client.post(
         "/api/music/generate",
         json={
-            "genre": "Trap",
-            "mood": "Energetic",
-            "tempo_bpm": 140,
+            "artist_influences": ["Depeche Mode"],
+            "mood": "dark",
+            "tempo_bpm": 120,
         },
         headers={"X-User-Id": "test-user"},
     )
@@ -219,29 +220,29 @@ def test_procedural_audio_file_created(client: TestClient):
     file_size = file_path.stat().st_size
     assert file_size > 0, "Audio file is empty"
 
-    # For an 8-bar track at 140 BPM (~14s), expect at least 100KB
+    # For an 8-bar track at 120 BPM (~16s), expect at least 100KB
     assert file_size > 100_000, f"Audio file too small: {file_size} bytes"
 
 
-def test_procedural_audio_different_genres(client: TestClient):
-    """Test that different genres produce different audio files."""
-    genres_to_test = [
-        ("Trap", "Energetic", 140),
-        ("LoFi", "Chill", 85),
+def test_procedural_audio_different_artists(client: TestClient):
+    """Test that different artists produce different audio files."""
+    artists_to_test = [
+        (["Depeche Mode"], "dark", 120),
+        (["Gary Numan"], "dystopian", 125),
     ]
 
-    for genre, mood, tempo in genres_to_test:
+    for artists, mood, tempo in artists_to_test:
         response = client.post(
             "/api/music/generate",
             json={
-                "genre": genre,
+                "artist_influences": artists,
                 "mood": mood,
                 "tempo_bpm": tempo,
             },
             headers={"X-User-Id": "test-user"},
         )
 
-        assert response.status_code == 200, f"Failed for genre: {genre}"
+        assert response.status_code == 200, f"Failed for artists: {artists}"
         data = response.json()
 
         # Check audio URL
@@ -253,4 +254,4 @@ def test_procedural_audio_different_genres(client: TestClient):
         filename = audio_url.split("/")[-1]
         static_dir = Path(__file__).parent.parent / "static" / "audio" / "music"
         file_path = static_dir / filename
-        assert file_path.exists(), f"Audio file not found for genre {genre}"
+        assert file_path.exists(), f"Audio file not found for artists {artists}"
