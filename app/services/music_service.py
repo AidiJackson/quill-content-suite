@@ -1419,7 +1419,7 @@ We're breaking through somehow"""
 
     def _generate_audio(self, request: MusicGenerateRequest) -> str:
         """
-        Generate premium backing track using PremiumMusicEngine.
+        Generate advanced multi-layer backing track using Advanced Synth Engine v1.
 
         Args:
             request: Full music generation request with artist_influences
@@ -1427,8 +1427,40 @@ We're breaking through somehow"""
         Returns:
             URL path to the generated audio file
         """
-        engine = PremiumMusicEngine()
-        return engine.generate_backing_track(request)
+        import soundfile as sf
+        from app.audio.engine import generate_full_track
+
+        # Build producer plan to drive the engine
+        plan = build_producer_plan(request)
+
+        # Generate track ID
+        track_input = f"{'_'.join(request.artist_influences)}{request.mood or ''}{request.reference_text or ''}"
+        track_id = hashlib.md5(track_input.encode()).hexdigest()[:12]
+
+        # Generate full stereo track using the advanced engine
+        try:
+            stereo_audio = generate_full_track(plan, track_id)
+
+            # Save to file
+            filename = f"track-{track_id}.wav"
+            file_path = AUDIO_DIR / filename
+            sf.write(str(file_path), stereo_audio, PremiumMusicEngine.SAMPLE_RATE)
+
+            logger.info(
+                f"Generated advanced track: {track_id} "
+                f"(artists={', '.join(request.artist_influences)}, "
+                f"{plan.config.get('tempo_bpm', 120)} BPM, "
+                f"{len(stereo_audio) / PremiumMusicEngine.SAMPLE_RATE:.1f}s)"
+            )
+
+            return f"/static/audio/music/{filename}"
+
+        except Exception as e:
+            logger.error(f"Failed to generate advanced music track: {e}")
+            # Fallback to old engine if new engine fails
+            logger.warning("Falling back to PremiumMusicEngine...")
+            engine = PremiumMusicEngine()
+            return engine.generate_backing_track(request)
 
 
 class MusicService:
