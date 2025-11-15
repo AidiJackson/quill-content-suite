@@ -5,7 +5,7 @@ import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
-import { Play, Music, Copy, Loader2, Check, ExternalLink, Mic } from 'lucide-react';
+import { Music, Copy, Loader2, Check, ExternalLink, Mic } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { toast } from 'sonner';
 import apiClient from '@/lib/apiClient';
@@ -139,14 +139,6 @@ export function MusicStudio() {
 
     navigator.clipboard.writeText(allLyrics);
     toast.success('Lyrics copied to clipboard');
-  };
-
-  const playDemo = () => {
-    if (!song) return;
-    window.open(song.fake_audio_url, '_blank');
-    toast.info('Audio playback not yet implemented', {
-      description: 'Real audio engine coming soon',
-    });
   };
 
   const handleGenerateVocals = async () => {
@@ -544,14 +536,13 @@ export function MusicStudio() {
                 <div className="space-y-3">
                   <div>
                     <Label className="text-sm text-slate-700 mb-2 block">Backing Track</Label>
-                    <Button
-                      variant="outline"
+                    <audio
+                      controls
                       className="w-full"
-                      onClick={playDemo}
+                      src={song.fake_audio_url}
                     >
-                      <Play className="w-4 h-4 mr-2" />
-                      Play Backing Track
-                    </Button>
+                      Your browser does not support the audio element.
+                    </audio>
                   </div>
 
                   {/* Vocals Section */}
