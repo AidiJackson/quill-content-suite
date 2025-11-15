@@ -66,6 +66,16 @@ app.include_router(audio.router, prefix="/api")
 app.include_router(music.router, prefix="/api")
 app.include_router(vocals.router, prefix="/api")
 
+# Mount static audio files
+static_audio_path = Path(__file__).parent.parent / "static"
+if static_audio_path.exists():
+    app.mount("/static", StaticFiles(directory=str(static_audio_path)), name="static")
+    logger.info(f"Serving static files from {static_audio_path}")
+else:
+    static_audio_path.mkdir(parents=True, exist_ok=True)
+    app.mount("/static", StaticFiles(directory=str(static_audio_path)), name="static")
+    logger.info(f"Created and mounted static directory at {static_audio_path}")
+
 # Serve frontend static files in production
 frontend_build_path = Path(__file__).parent.parent / "frontend" / "build"
 if frontend_build_path.exists():

@@ -3,8 +3,11 @@
 import hashlib
 import uuid
 from typing import Any, Dict, List, Optional
+from pathlib import Path
 
 from sqlalchemy.orm import Session
+from pydub import AudioSegment
+from pydub.generators import Sine
 
 from app.core.logging import get_logger
 from app.models.media_file import MediaFile, MediaType
@@ -12,6 +15,10 @@ from app.schemas.media import (MusicGenerateRequest, MusicGenerateResponse,
                                 MusicSection, VocalStyle)
 
 logger = get_logger(__name__)
+
+# Audio storage directory
+AUDIO_DIR = Path(__file__).parent.parent.parent / "static" / "audio" / "music"
+AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class FakeMusicGenerator:
@@ -119,8 +126,8 @@ class FakeMusicGenerator:
             chorus
         )
 
-        # Create fake audio URL
-        fake_audio_url = f"https://fake-storage.example.com/tracks/{track_id}.mp3"
+        # Generate actual audio file
+        audio_url = self._generate_audio(track_id, request.genre, tempo_bpm)
 
         return MusicGenerateResponse(
             track_id=track_id,
@@ -132,7 +139,7 @@ class FakeMusicGenerator:
             hook=hook,
             chorus=chorus,
             sections=sections,
-            fake_audio_url=fake_audio_url,
+            fake_audio_url=audio_url,
             saved_media_id=None
         )
 
@@ -317,6 +324,72 @@ class MusicService:
 
         logger.info(f"Generated song: {response.title} ({response.track_id})")
         return response
+
+    def _generate_audio(self, track_id: str, genre: str, tempo_bpm: int) -> str:
+        """
+        Generate a simple audio backing track.
+
+        Creates a basic rhythmic pattern using sine waves at different frequencies.
+        """
+        try:
+            filename = f"{track_id}.wav"
+            file_path = AUDIO_DIR / filename
+
+            # Calculate beat duration in milliseconds
+            beat_duration_ms = int(60000 / tempo_bpm)
+
+            # Genre-specific frequency mappings (in Hz)
+            genre_freq_map = {
+                "trap": [220, 330, 440],      # A, E, A (minor feel)
+                "drill": [196, 294, 392],      # G, D, G
+                "afrobeat": [262, 392, 523],   # C, G, C (uplifting)
+                "lofi": [220, 277, 330],       # A, C#, E (jazzy)
+                "pop": [262, 330, 392],        # C, E, G (major)
+                "edm": [196, 330, 494],        # G, E, B
+                "rnb": [233, 294, 349],        # Bb, D, F
+                "hiphop": [220, 293, 440],     # A, D, A
+            }
+
+            frequencies = genre_freq_map.get(genre.lower(), [262, 330, 392])
+
+            # Create 30 seconds of audio (typical preview length)
+            total_duration = 30000  # 30 seconds in ms
+
+            # Create silence as base
+            track = AudioSegment.silent(duration=total_duration)
+
+            # Add rhythmic pattern
+            pattern_duration = beat_duration_ms * 4  # 4-beat pattern
+            current_time = 0
+
+            while current_time < total_duration:
+                # Beat 1 - root note (longer)
+                tone = Sine(frequencies[0]).to_audio_segment(duration=beat_duration_ms // 2)
+                track = track.overlay(tone, position=current_time)
+
+                # Beat 3 - fifth (shorter)
+                tone2 = Sine(frequencies[1]).to_audio_segment(duration=beat_duration_ms // 3)
+                track = track.overlay(tone2, position=current_time + beat_duration_ms * 2)
+
+                current_time += pattern_duration
+
+            # Fade in/out for smooth playback
+            track = track.fade_in(1000).fade_out(2000)
+
+            # Reduce volume to -20dB so it's not too loud
+            track = track - 20
+
+            # Export as WAV (doesn't require ffmpeg)
+            track.export(str(file_path), format="wav")
+
+            logger.info(f"Generated audio track: {track_id} ({genre}, {tempo_bpm} BPM)")
+
+            return f"/static/audio/music/{filename}"
+
+        except Exception as e:
+            logger.error(f"Failed to generate audio: {e}")
+            # Return a fallback URL
+            return f"/static/audio/music/placeholder.wav"
 
     def _save_media_file(
         self,
