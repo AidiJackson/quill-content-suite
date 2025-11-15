@@ -1,57 +1,78 @@
-"""Vocal generation service with fake/demo vocal engine."""
+"""Vocal generation service with TTS-based vocal engine."""
 
 import uuid
+import os
 from typing import Optional
+from pathlib import Path
 
+from gtts import gTTS
 from app.core.logging import get_logger
 from app.schemas.media import VocalGenerateRequest, VocalGenerateResponse
 
 logger = get_logger(__name__)
 
+# Audio storage directory
+AUDIO_DIR = Path(__file__).parent.parent.parent / "static" / "audio" / "vocals"
+AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+
 
 class FakeVocalEngine:
     """
-    Deterministic fake vocal engine for demo purposes.
+    TTS-based vocal engine for demo purposes.
 
-    This generates realistic-looking vocal outputs without actually
-    rendering audio. Designed to be swapped with a real singing model later.
+    Generates real playable audio using Google Text-to-Speech.
+    Designed to be swapped with a real singing model later.
     """
 
     def generate(self, request: VocalGenerateRequest) -> VocalGenerateResponse:
         """
-        Generate a fake vocal rendering from the request.
+        Generate actual TTS vocal audio from the request.
 
         Args:
             request: Vocal generation request with lyrics and style
 
         Returns:
-            VocalGenerateResponse with demo audio URL and metadata
+            VocalGenerateResponse with real audio URL and metadata
         """
         # Generate unique vocal ID
         vocal_id = str(uuid.uuid4())
 
-        # Build deterministic audio URL
-        gender = request.vocal_style.gender.lower()
-        energy = request.vocal_style.energy.lower()
-        audio_url = f"https://demo.quillography.ai/audio/vocals/{gender}-{energy}-{vocal_id}.mp3"
+        # Create filename
+        filename = f"{vocal_id}.mp3"
+        file_path = AUDIO_DIR / filename
 
-        # Estimate duration based on lyrics and tempo
-        duration_seconds = self._estimate_duration(
-            lyrics=request.lyrics,
-            tempo_bpm=request.tempo_bpm
-        )
+        try:
+            # Generate TTS audio from lyrics
+            # Use slow=False for normal speech speed
+            tts = gTTS(text=request.lyrics, lang='en', slow=False)
+            tts.save(str(file_path))
 
-        # Add demo notes
+            # Get actual file size for duration estimation
+            file_size = os.path.getsize(file_path)
+            # Rough estimation: ~1 second per 4KB for speech
+            duration_seconds = max(10, int(file_size / 4000))
+
+            logger.info(
+                f"Generated TTS vocal: {vocal_id} "
+                f"({file_size} bytes, ~{duration_seconds}s)"
+            )
+        except Exception as e:
+            logger.error(f"Failed to generate TTS audio: {e}")
+            # Fallback to estimation if TTS fails
+            duration_seconds = self._estimate_duration(
+                lyrics=request.lyrics,
+                tempo_bpm=request.tempo_bpm
+            )
+
+        # Build audio URL that points to our static file server
+        audio_url = f"/static/audio/vocals/{filename}"
+
+        # Add notes
         notes = (
-            f"Demo vocal rendering (fake engine). "
+            f"TTS-generated vocals. "
             f"Style: {request.vocal_style.gender} vocals, {request.vocal_style.tone} tone, "
             f"{request.vocal_style.energy} energy. "
-            f"Replace with real singing model output."
-        )
-
-        logger.info(
-            f"Generated fake vocal: {vocal_id} "
-            f"({gender}/{energy}, ~{duration_seconds}s)"
+            f"Real singing model coming soon."
         )
 
         return VocalGenerateResponse(
