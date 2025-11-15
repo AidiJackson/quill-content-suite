@@ -286,45 +286,6 @@ We'll still be standing proud
 Nothing can stop us now
 We're breaking through the clouds"""
 
-
-class MusicService:
-    """Service for music generation operations."""
-
-    def __init__(self, db: Optional[Session] = None):
-        """Initialize music service."""
-        self.db = db
-        self.generator = FakeMusicGenerator()
-
-    def generate_song(self, request: MusicGenerateRequest) -> MusicGenerateResponse:
-        """
-        Generate a complete song blueprint.
-
-        Creates structured output with lyrics, sections, and metadata.
-        """
-        logger.info(f"Generating song: genre={request.genre}, mood={request.mood}")
-
-        # Generate the song
-        response = self.generator.generate_song(request)
-
-        # Save to database if project_id provided
-        if request.project_id and self.db:
-            saved_media_id = self._save_media_file(
-                project_id=request.project_id,
-                url=response.fake_audio_url,
-                metadata={
-                    "track_id": response.track_id,
-                    "title": response.title,
-                    "genre": response.genre,
-                    "mood": response.mood,
-                    "tempo_bpm": response.tempo_bpm,
-                    "operation": "song_generation",
-                }
-            )
-            response.saved_media_id = saved_media_id
-
-        logger.info(f"Generated song: {response.title} ({response.track_id})")
-        return response
-
     def _generate_audio(self, track_id: str, genre: str, tempo_bpm: int) -> str:
         """
         Generate a simple audio backing track.
@@ -390,6 +351,45 @@ class MusicService:
             logger.error(f"Failed to generate audio: {e}")
             # Return a fallback URL
             return f"/static/audio/music/placeholder.wav"
+
+
+class MusicService:
+    """Service for music generation operations."""
+
+    def __init__(self, db: Optional[Session] = None):
+        """Initialize music service."""
+        self.db = db
+        self.generator = FakeMusicGenerator()
+
+    def generate_song(self, request: MusicGenerateRequest) -> MusicGenerateResponse:
+        """
+        Generate a complete song blueprint.
+
+        Creates structured output with lyrics, sections, and metadata.
+        """
+        logger.info(f"Generating song: genre={request.genre}, mood={request.mood}")
+
+        # Generate the song
+        response = self.generator.generate_song(request)
+
+        # Save to database if project_id provided
+        if request.project_id and self.db:
+            saved_media_id = self._save_media_file(
+                project_id=request.project_id,
+                url=response.fake_audio_url,
+                metadata={
+                    "track_id": response.track_id,
+                    "title": response.title,
+                    "genre": response.genre,
+                    "mood": response.mood,
+                    "tempo_bpm": response.tempo_bpm,
+                    "operation": "song_generation",
+                }
+            )
+            response.saved_media_id = saved_media_id
+
+        logger.info(f"Generated song: {response.title} ({response.track_id})")
+        return response
 
     def _save_media_file(
         self,
