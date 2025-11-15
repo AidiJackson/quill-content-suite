@@ -223,6 +223,12 @@ class MusicGenerateRequest(BaseModel):
     tempo_bpm: Optional[int] = Field(None, ge=60, le=200, description="Tempo in BPM (auto-detected from artists if not provided)")
     reference_text: Optional[str] = Field(None, description="Reference text or song idea")
     sections: Optional[List[str]] = Field(None, description="Desired sections (e.g., intro, verse, chorus)")
+
+    # Influence & Intent fields
+    influence_text: Optional[str] = Field(None, description="Natural language description of desired track (e.g., 'Dark emotional track inspired by Linkin Park')")
+    influence_artists: Optional[List[str]] = Field(None, description="Artist influences for the producer plan (e.g., ['Linkin Park', 'Eminem'])")
+    usage_context: Optional[str] = Field(None, description="Usage context (e.g., 'tiktok', 'full_song', 'background')")
+
     project_id: Optional[str] = None
 
 
@@ -242,6 +248,7 @@ class MusicGenerateResponse(BaseModel):
     chorus: str = Field(..., description="Main chorus lyrics")
     sections: List[MusicSection] = Field(..., description="Song structure with lyrics")
     fake_audio_url: str = Field(..., description="Audio URL for backing track")
+    plan_summary: Optional[str] = Field(None, description="Summary of how influences were interpreted by the producer plan")
     saved_media_id: Optional[str] = None
 
 

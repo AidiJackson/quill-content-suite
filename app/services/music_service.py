@@ -16,6 +16,7 @@ from app.schemas.media import (MusicGenerateRequest, MusicGenerateResponse,
 from app.music.artist_profiles import (
     get_artist_profile, get_scale_degrees, roman_to_semitones
 )
+from app.services.producer_plan_service import build_producer_plan
 
 logger = get_logger(__name__)
 
@@ -1163,6 +1164,10 @@ class PremiumMusicGenerator:
     def generate_song(self, request: MusicGenerateRequest) -> MusicGenerateResponse:
         """Generate a complete song blueprint from artist influences."""
 
+        # Build producer plan from influence & intent fields
+        plan = build_producer_plan(request)
+        plan_summary = plan.summary
+
         # Normalize artist names to keys
         artist_keys = []
         for artist in request.artist_influences:
@@ -1178,15 +1183,22 @@ class PremiumMusicGenerator:
         primary_key = artist_keys[0]
         primary_artist = PremiumMusicEngine.ARTIST_DATABASE[primary_key]
 
-        # Determine artist_style for procedural generation
-        if request.artist_style:
+        # Determine artist_style (plan overrides request overrides default)
+        if plan.config.get("artist_style") and plan.config["artist_style"] != "generic":
+            artist_style = plan.config["artist_style"]
+        elif request.artist_style:
             artist_style = request.artist_style
         else:
             # Default to primary artist key
             artist_style = primary_key
 
-        # Determine mood (from request or artist default)
-        mood = request.mood or primary_artist["mood"]
+        # Determine mood (plan overrides request overrides artist default)
+        if plan.config.get("mood") and plan.config["mood"] != "neutral":
+            mood = plan.config["mood"]
+        elif request.mood:
+            mood = request.mood
+        else:
+            mood = primary_artist["mood"]
 
         # Get mood modifier
         mood_mod = self.MOOD_MODIFIERS.get(mood, self.MOOD_MODIFIERS["dark"])
@@ -1198,8 +1210,10 @@ class PremiumMusicGenerator:
         # Generate title
         title = self._generate_title(request.artist_influences, mood, request.reference_text)
 
-        # Determine tempo (from request or artist average)
-        if request.tempo_bpm:
+        # Determine tempo (plan overrides request overrides artist average)
+        if plan.config.get("tempo_bpm"):
+            tempo_bpm = plan.config["tempo_bpm"]
+        elif request.tempo_bpm:
             tempo_bpm = request.tempo_bpm
         else:
             tempo_ranges = [PremiumMusicEngine.ARTIST_DATABASE[k]["tempo_range"] for k in artist_keys]
@@ -1259,6 +1273,7 @@ class PremiumMusicGenerator:
             chorus=chorus,
             sections=sections,
             fake_audio_url=audio_url,
+            plan_summary=plan_summary,
             saved_media_id=None
         )
 
