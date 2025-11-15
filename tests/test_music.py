@@ -23,6 +23,7 @@ def test_generate_music_basic(client: TestClient):
     assert "track_id" in data
     assert "title" in data
     assert "artist_influences" in data
+    assert "artist_style" in data
     assert "instruments" in data
     assert "production_era" in data
     assert "mood" in data
@@ -255,3 +256,75 @@ def test_procedural_audio_different_artists(client: TestClient):
         static_dir = Path(__file__).parent.parent / "static" / "audio" / "music"
         file_path = static_dir / filename
         assert file_path.exists(), f"Audio file not found for artists {artists}"
+
+
+def test_artist_style_basic(client: TestClient):
+    """Test music generation with artist_style parameter."""
+    response = client.post(
+        "/api/music/generate",
+        json={
+            "artist_influences": ["Depeche Mode"],
+            "artist_style": "depeche_mode",
+        },
+        headers={"X-User-Id": "test-user"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # Check artist_style is in response
+    assert "artist_style" in data
+    assert data["artist_style"] == "depeche_mode"
+
+
+def test_artist_style_all_profiles(client: TestClient):
+    """Test all available artist style profiles."""
+    artist_styles = [
+        ("depeche_mode", ["Depeche Mode"]),
+        ("gary_numan", ["Gary Numan"]),
+        ("kraftwerk", ["Kraftwerk"]),
+        ("pet_shop_boys", ["Pet Shop Boys"]),
+    ]
+
+    for style, artists in artist_styles:
+        response = client.post(
+            "/api/music/generate",
+            json={
+                "artist_influences": artists,
+                "artist_style": style,
+            },
+            headers={"X-User-Id": "test-user"},
+        )
+
+        assert response.status_code == 200, f"Failed for artist_style: {style}"
+        data = response.json()
+
+        # Check artist_style is returned
+        assert data["artist_style"] == style
+
+        # Check audio file was created
+        audio_url = data["fake_audio_url"]
+        assert audio_url.startswith("/static/audio/music/")
+        filename = audio_url.split("/")[-1]
+        static_dir = Path(__file__).parent.parent / "static" / "audio" / "music"
+        file_path = static_dir / filename
+        assert file_path.exists(), f"Audio file not found for style {style}"
+        assert file_path.stat().st_size > 0, f"Audio file is empty for style {style}"
+
+
+def test_artist_style_auto_detect(client: TestClient):
+    """Test that artist_style is auto-detected when not provided."""
+    response = client.post(
+        "/api/music/generate",
+        json={
+            "artist_influences": ["Gary Numan"],
+        },
+        headers={"X-User-Id": "test-user"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # Should auto-detect artist_style from first artist
+    assert "artist_style" in data
+    assert data["artist_style"] == "gary_numan"

@@ -13,6 +13,7 @@ import type { GenerateTrackRequest, GenerateTrackResponse, GenerateVocalsRespons
 
 export function MusicStudio() {
   const [selectedArtists, setSelectedArtists] = useState<string[]>(['Depeche Mode']);
+  const [artistStyle, setArtistStyle] = useState<string>('');
   const [mood, setMood] = useState('');
   const [tempoBpm, setTempoBpm] = useState<string>('');
   const [referenceText, setReferenceText] = useState('');
@@ -54,6 +55,7 @@ export function MusicStudio() {
 
       const request: GenerateTrackRequest = {
         artist_influences: selectedArtists,
+        artist_style: artistStyle || undefined,
         mood: mood || undefined,
         tempo_bpm: tempoBpm ? parseInt(tempoBpm) : undefined,
         reference_text: referenceText || undefined,
@@ -168,6 +170,23 @@ export function MusicStudio() {
               </div>
 
               <div>
+                <Label htmlFor="artist-style" className="text-sm text-slate-700">
+                  Artist Style <span className="text-slate-500">- Optional (for distinct procedural sound)</span>
+                </Label>
+                <Select value={artistStyle} onValueChange={setArtistStyle}>
+                  <SelectTrigger id="artist-style" className="mt-1.5">
+                    <SelectValue placeholder="Auto-detect from artists" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="depeche_mode">Depeche Mode Style</SelectItem>
+                    <SelectItem value="gary_numan">Gary Numan Style</SelectItem>
+                    <SelectItem value="kraftwerk">Kraftwerk Style</SelectItem>
+                    <SelectItem value="pet_shop_boys">Pet Shop Boys Style</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
                 <Label htmlFor="mood" className="text-sm text-slate-700">
                   Mood <span className="text-slate-500">- Optional (auto-detected from artists)</span>
                 </Label>
@@ -256,6 +275,12 @@ export function MusicStudio() {
                       </Badge>
                     ))}
                   </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600">Artist Style:</span>
+                  <Badge variant="secondary" className="capitalize text-xs">
+                    {song.artist_style.replace(/_/g, ' ')}
+                  </Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-slate-600">Mood:</span>

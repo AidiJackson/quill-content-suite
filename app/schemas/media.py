@@ -204,6 +204,10 @@ class MusicGenerateRequest(BaseModel):
         min_length=1,
         description="Artist influences (e.g., ['Depeche Mode', 'Gary Numan'])"
     )
+    artist_style: Optional[str] = Field(
+        None,
+        description="Artist style for procedural generation (e.g., 'depeche_mode', 'gary_numan', 'kraftwerk', 'pet_shop_boys')"
+    )
     instruments: Optional[List[str]] = Field(
         None,
         description="Specific instruments to use (e.g., ['analog_synth', '808', 'arpeggiator'])"
@@ -228,6 +232,7 @@ class MusicGenerateResponse(BaseModel):
     track_id: str = Field(..., description="Unique track identifier")
     title: str = Field(..., description="Generated song title")
     artist_influences: List[str] = Field(..., description="Artist influences used")
+    artist_style: str = Field(..., description="Artist style used for procedural generation")
     instruments: List[str] = Field(..., description="Instruments used in the track")
     production_era: str = Field(..., description="Production era style")
     mood: str
