@@ -13,6 +13,9 @@ from app.core.logging import get_logger
 from app.models.media_file import MediaFile, MediaType
 from app.schemas.media import (MusicGenerateRequest, MusicGenerateResponse,
                                 MusicSection, VocalStyle)
+from app.music.artist_profiles import (
+    get_artist_profile, get_scale_degrees, roman_to_semitones
+)
 
 logger = get_logger(__name__)
 
@@ -271,17 +274,18 @@ class PremiumMusicEngine:
                 params["bass_intensity"]
             )
 
-            # Generate synth layers based on synth type
+            # Generate synth layers based on synth type with artist-specific chords
             synth = self._generate_premium_synth(
                 num_samples, tempo_bpm,
                 params["scale"],
-                params["synth_type"]
+                params["synth_type"],
+                params["artist_style"]
             )
 
-            # Add arpeggiator if in instruments
+            # Add arpeggiator if in instruments with artist-specific patterns
             if "arpeggiator" in params["instruments"]:
                 arp = self._generate_arpeggiator(
-                    num_samples, tempo_bpm, params["scale"]
+                    num_samples, tempo_bpm, params["scale"], params["artist_style"]
                 )
                 mix = kick + snare + hihat + bass + synth + arp
             else:
@@ -353,6 +357,14 @@ class PremiumMusicEngine:
         # Get primary artist (first in list)
         primary = self.ARTIST_DATABASE[artist_keys[0]]
 
+        # Determine artist_style for procedural generation
+        # Use request.artist_style if provided, otherwise infer from first artist
+        if request.artist_style:
+            artist_style = request.artist_style
+        else:
+            # Map artist names to artist_style (procedural profiles)
+            artist_style = artist_keys[0]
+
         # Merge characteristics from multiple artists
         merged_instruments = set(primary["instruments"])
         merged_scales = primary["scales"]
@@ -382,8 +394,8 @@ class PremiumMusicEngine:
         avg_max = int(np.mean([r[1] for r in tempo_ranges]))
         default_tempo = (avg_min + avg_max) // 2
 
-        # Determine drum patterns based on mood and era
-        kick_pattern, snare_pattern, hihat_pattern = self._get_drum_patterns(final_mood, final_era)
+        # Determine drum patterns based on mood and era (will be replaced by artist-specific grooves)
+        kick_pattern, snare_pattern, hihat_pattern = self._get_drum_patterns(final_mood, final_era, artist_style)
 
         # Determine drum machine
         drum_machine = primary["characteristics"]["drum_machine"]
@@ -397,6 +409,7 @@ class PremiumMusicEngine:
 
         return {
             "artist_keys": artist_keys,
+            "artist_style": artist_style,
             "instruments": final_instruments,
             "scale": scale,
             "tempo_bpm": default_tempo,
@@ -413,8 +426,31 @@ class PremiumMusicEngine:
             "use_gated_reverb": primary["characteristics"]["use_gated_reverb"],
         }
 
-    def _get_drum_patterns(self, mood: str, era: str) -> tuple:
-        """Get era and mood-appropriate drum patterns."""
+    def _get_drum_patterns(self, mood: str, era: str, artist_style: str) -> tuple:
+        """
+        Get artist-specific drum patterns from profiles.
+
+        Falls back to mood-based patterns if artist profile not available.
+        """
+        # Try to get artist-specific groove template
+        profile = get_artist_profile(artist_style)
+        if profile and "groove_templates" in profile and profile["groove_templates"]:
+            # Use first groove template (could randomize or select based on mood later)
+            groove = profile["groove_templates"][0]
+
+            # Convert 16-step patterns to 8-step for compatibility
+            # (take every other step for now)
+            kick_pattern = [groove["kick"][i] for i in range(0, 16, 2)]
+            snare_pattern = [groove["snare"][i] for i in range(0, 16, 2)]
+            # Combine closed and open hihat
+            hihat_pattern = [
+                max(groove["hihat_closed"][i], groove["hihat_open"][i])
+                for i in range(0, 16, 2)
+            ]
+
+            return kick_pattern, snare_pattern, hihat_pattern
+
+        # Fallback to mood-based patterns if artist profile not found
         # Dark/dystopian moods
         if mood in ["dark", "dystopian", "atmospheric"]:
             kick_pattern = [1, 0, 0, 0, 1, 0, 1, 0]
@@ -865,24 +901,46 @@ class PremiumMusicEngine:
 
     def _generate_premium_synth(
         self, num_samples: int, tempo_bpm: float,
-        scale: List[float], synth_type: str
+        scale: List[float], synth_type: str, artist_style: str
     ) -> np.ndarray:
-        """Generate premium synth pads/chords with dramatically different character per type."""
+        """Generate premium synth pads/chords with artist-specific progressions."""
         track = np.zeros(num_samples)
-        samples_per_2bars = int(8 * 60 * self.SAMPLE_RATE / tempo_bpm)
 
-        # Chord progressions
-        chords = [
-            [scale[0], scale[2], scale[4]],  # i
-            [scale[3], scale[5], scale[1]],  # VI
-        ]
+        # Get artist profile and build chords from Roman numerals
+        profile = get_artist_profile(artist_style)
+        scale_name = profile.get("scale", "natural_minor")
+        root_midi = profile.get("root_midi", 57)  # Default A3
+        harmonic_rhythm = profile.get("harmonic_rhythm", "normal")
+
+        # Get chord progression (use first progression)
+        chord_progression = profile.get("chord_progressions", [["i", "VI", "III", "VII"]])[0]
+
+        # Convert Roman numerals to frequency chords
+        chords = []
+        for roman in chord_progression:
+            semitones = roman_to_semitones(roman, scale_name)
+            # Convert MIDI notes to frequencies
+            freqs = [440 * (2 ** ((root_midi + s - 69) / 12)) for s in semitones]
+            chords.append(freqs)
+
+        # Determine chord duration based on harmonic rhythm
+        if harmonic_rhythm == "slow":
+            bars_per_chord = 2
+        elif harmonic_rhythm == "static":
+            bars_per_chord = 4
+        elif harmonic_rhythm == "rigid":
+            bars_per_chord = 1
+        else:  # normal
+            bars_per_chord = 1
+
+        samples_per_chord = int(bars_per_chord * 4 * 60 * self.SAMPLE_RATE / tempo_bpm)
 
         chord_index = 0
         current_sample = 0
 
         while current_sample < num_samples:
             chord = chords[chord_index % len(chords)]
-            chord_duration = min(samples_per_2bars, num_samples - current_sample)
+            chord_duration = min(samples_per_chord, num_samples - current_sample)
             t = np.arange(chord_duration) / self.SAMPLE_RATE
 
             chord_sound = np.zeros(chord_duration)
@@ -978,27 +1036,38 @@ class PremiumMusicEngine:
 
             track[current_sample:current_sample + chord_duration] = chord_sound
 
-            current_sample += samples_per_2bars
+            current_sample += samples_per_chord
             chord_index += 1
 
         return track
 
     def _generate_arpeggiator(
-        self, num_samples: int, tempo_bpm: float, scale: List[float]
+        self, num_samples: int, tempo_bpm: float, scale: List[float], artist_style: str
     ) -> np.ndarray:
-        """Generate arpeggiated sequence."""
+        """Generate artist-specific arpeggiated sequence."""
         track = np.zeros(num_samples)
         samples_per_16th = int(15 * self.SAMPLE_RATE / tempo_bpm)
 
-        # Arpeggio pattern (up and down)
-        arp_pattern = [0, 2, 4, 2, 0, 2, 4, 5]
+        # Get artist-specific arpeggiator pattern
+        profile = get_artist_profile(artist_style)
+        arp_patterns = profile.get("arp_patterns", [[0, 2, 4, 2, 0, 2, 4, 5]])
+        arp_pattern = arp_patterns[0]  # Use first pattern
+
+        # Get scale from profile to build notes
+        scale_name = profile.get("scale", "natural_minor")
+        root_midi = profile.get("root_midi", 57)
+        scale_degrees = get_scale_degrees(scale_name)
+
+        # Build frequency scale from MIDI root
+        freq_scale = [440 * (2 ** ((root_midi + s - 69) / 12)) for s in scale_degrees]
 
         step_index = 0
         current_sample = 0
 
         while current_sample < num_samples:
+            # Arp pattern contains scale degree offsets
             note_idx = arp_pattern[step_index % len(arp_pattern)]
-            freq = scale[note_idx % len(scale)]
+            freq = freq_scale[note_idx % len(freq_scale)]
             note_duration = min(samples_per_16th, num_samples - current_sample)
             t = np.arange(note_duration) / self.SAMPLE_RATE
 
@@ -1109,6 +1178,13 @@ class PremiumMusicGenerator:
         primary_key = artist_keys[0]
         primary_artist = PremiumMusicEngine.ARTIST_DATABASE[primary_key]
 
+        # Determine artist_style for procedural generation
+        if request.artist_style:
+            artist_style = request.artist_style
+        else:
+            # Default to primary artist key
+            artist_style = primary_key
+
         # Determine mood (from request or artist default)
         mood = request.mood or primary_artist["mood"]
 
@@ -1173,6 +1249,7 @@ class PremiumMusicGenerator:
             track_id=track_id,
             title=title,
             artist_influences=request.artist_influences,
+            artist_style=artist_style,
             instruments=instruments,
             production_era=production_era,
             mood=mood,
@@ -1371,6 +1448,7 @@ class MusicService:
                     "track_id": response.track_id,
                     "title": response.title,
                     "artist_influences": response.artist_influences,
+                    "artist_style": response.artist_style,
                     "instruments": response.instruments,
                     "production_era": response.production_era,
                     "mood": response.mood,
