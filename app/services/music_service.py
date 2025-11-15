@@ -470,69 +470,94 @@ class PremiumMusicEngine:
         return track
 
     def _808_kick(self) -> np.ndarray:
-        """Authentic TR-808 kick synthesis."""
-        duration = int(0.3 * self.SAMPLE_RATE)
+        """Authentic TR-808 kick - deep, boomy, long decay."""
+        duration = int(0.4 * self.SAMPLE_RATE)  # Longer for 808 character
         t = np.arange(duration) / self.SAMPLE_RATE
 
-        # Pitch envelope (frequency sweep from 150Hz down to 40Hz)
-        freq_start = 150
-        freq_end = 40
-        freq_env = freq_start * np.exp(-7 * t) + freq_end
+        # Deep pitch envelope (frequency sweep from 180Hz down to 35Hz)
+        freq_start = 180
+        freq_end = 35
+        freq_env = freq_start * np.exp(-6 * t) + freq_end
 
-        # Amplitude envelope (exponential decay)
-        amp_env = np.exp(-6 * t)
+        # Slower amplitude envelope for that boomy character
+        amp_env = np.exp(-4.5 * t)
 
         # Sine oscillator with pitch envelope
         phase = 2 * np.pi * np.cumsum(freq_env) / self.SAMPLE_RATE
-        kick = 0.9 * np.sin(phase) * amp_env
+        kick = 1.0 * np.sin(phase) * amp_env
 
-        # Add click/attack transient
-        click = np.exp(-300 * t) * np.random.randn(duration) * 0.1
-        kick = kick + click
+        # Add sub-harmonic for extra depth
+        sub_freq_env = freq_env * 0.5
+        sub_phase = 2 * np.pi * np.cumsum(sub_freq_env) / self.SAMPLE_RATE
+        kick += 0.3 * np.sin(sub_phase) * amp_env
 
-        return kick
+        # Sharp attack click (classic 808 characteristic)
+        click_duration = int(0.002 * self.SAMPLE_RATE)
+        click = np.zeros(duration)
+        click[:click_duration] = np.exp(-500 * t[:click_duration]) * 0.15
+
+        # Combine with some noise for texture
+        noise = np.random.randn(duration) * np.exp(-50 * t) * 0.05
+
+        return kick + click + noise
 
     def _909_kick(self) -> np.ndarray:
-        """Authentic TR-909 kick synthesis."""
-        duration = int(0.25 * self.SAMPLE_RATE)
+        """Authentic TR-909 kick - punchy, tight, with pronounced click."""
+        duration = int(0.18 * self.SAMPLE_RATE)  # Tighter than 808
         t = np.arange(duration) / self.SAMPLE_RATE
 
-        # Sharper pitch envelope
-        freq_start = 180
-        freq_end = 50
-        freq_env = freq_start * np.exp(-10 * t) + freq_end
+        # Sharp pitch envelope (909 is punchier)
+        freq_start = 220
+        freq_end = 55
+        freq_env = freq_start * np.exp(-12 * t) + freq_end
 
-        # Tighter amplitude envelope
-        amp_env = np.exp(-8 * t)
+        # Very tight amplitude envelope
+        amp_env = np.exp(-10 * t)
 
-        # Sine oscillator
+        # Sine oscillator with some distortion
         phase = 2 * np.pi * np.cumsum(freq_env) / self.SAMPLE_RATE
-        kick = 0.85 * np.sin(phase) * amp_env
+        kick = 0.95 * np.sin(phase) * amp_env
 
-        # More pronounced click
-        click = np.exp(-400 * t) * np.random.randn(duration) * 0.15
-        kick = kick + click
+        # Add slight harmonic distortion for punch
+        kick += 0.15 * np.sin(2 * phase) * amp_env * np.exp(-15 * t)
 
-        return kick
+        # Very pronounced click (909 signature)
+        click_duration = int(0.003 * self.SAMPLE_RATE)
+        click = np.zeros(duration)
+        click_env = np.exp(-600 * t[:click_duration])
+        click[:click_duration] = np.random.randn(click_duration) * click_env * 0.25
+
+        return kick + click
 
     def _linn_kick(self) -> np.ndarray:
-        """LinnDrum kick synthesis."""
-        duration = int(0.2 * self.SAMPLE_RATE)
+        """LinnDrum kick - natural, sample-like, less synthetic."""
+        duration = int(0.22 * self.SAMPLE_RATE)
         t = np.arange(duration) / self.SAMPLE_RATE
 
-        # Subtle pitch envelope
-        freq_start = 120
-        freq_end = 45
-        freq_env = freq_start * np.exp(-5 * t) + freq_end
+        # More moderate pitch envelope (natural acoustic kick behavior)
+        freq_start = 140
+        freq_end = 50
+        freq_env = freq_start * np.exp(-7 * t) + freq_end
 
-        # Natural-sounding envelope
-        amp_env = np.exp(-5 * t)
+        # Natural decay curve
+        amp_env = np.exp(-6 * t)
 
-        # Sine oscillator
+        # Sine with slight harmonics for realism
         phase = 2 * np.pi * np.cumsum(freq_env) / self.SAMPLE_RATE
-        kick = 0.8 * np.sin(phase) * amp_env
+        kick = 0.85 * np.sin(phase) * amp_env
+        kick += 0.1 * np.sin(1.5 * phase) * amp_env  # Slight overtone
 
-        return kick
+        # Softer attack transient (more acoustic)
+        attack_duration = int(0.005 * self.SAMPLE_RATE)
+        attack = np.zeros(duration)
+        attack[:attack_duration] = np.linspace(0, 1, attack_duration) ** 0.5
+        attack[attack_duration:] = 1
+        kick = kick * attack
+
+        # Add subtle noise for texture (simulating beater hit)
+        noise = np.random.randn(duration) * np.exp(-30 * t) * 0.08
+
+        return kick + noise
 
     def _generate_premium_snare(
         self, num_samples: int, tempo_bpm: float,
@@ -674,7 +699,7 @@ class PremiumMusicEngine:
         self, num_samples: int, tempo_bpm: float,
         scale: List[float], intensity: float
     ) -> np.ndarray:
-        """Moog-style analog bass with filter sweep."""
+        """Moog-style analog bass - fat, rich, filter sweep, slight detuning."""
         track = np.zeros(num_samples)
         samples_per_bar = int(4 * 60 * self.SAMPLE_RATE / tempo_bpm)
 
@@ -689,24 +714,35 @@ class PremiumMusicEngine:
             bar_duration = min(samples_per_bar, num_samples - current_sample)
             t = np.arange(bar_duration) / self.SAMPLE_RATE
 
-            # Sawtooth wave (rich harmonics)
-            sawtooth = 2 * (t * freq % 1) - 1
+            # Triple sawtooth with slight detuning for FAT sound
+            saw1 = 2 * (t * freq % 1) - 1
+            saw2 = 2 * (t * freq * 1.005 % 1) - 1  # Slightly sharp
+            saw3 = 2 * (t * freq * 0.995 % 1) - 1  # Slightly flat
+            sawtooth = (saw1 + saw2 + saw3) / 3
 
             # ADSR envelope
-            attack = int(0.01 * self.SAMPLE_RATE)
-            decay = int(0.1 * self.SAMPLE_RATE)
-            sustain_level = 0.7
-            release = int(0.2 * self.SAMPLE_RATE)
+            attack = int(0.005 * self.SAMPLE_RATE)  # Very fast attack
+            decay = int(0.15 * self.SAMPLE_RATE)
+            sustain_level = 0.65
+            release = int(0.25 * self.SAMPLE_RATE)
 
             envelope = np.ones(bar_duration)
             if len(envelope) > attack:
                 envelope[:attack] = np.linspace(0, 1, attack)
             if len(envelope) > attack + decay:
                 envelope[attack:attack + decay] = np.linspace(1, sustain_level, decay)
-                envelope[attack + decay:-release] = sustain_level
-                envelope[-release:] = np.linspace(sustain_level, 0, release)
+                if len(envelope) > attack + decay + release:
+                    envelope[attack + decay:-release] = sustain_level
+                    envelope[-release:] = np.linspace(sustain_level, 0, release)
 
-            bass_note = intensity * sawtooth * envelope
+            # Resonant low-pass filter simulation (time-varying)
+            cutoff_envelope = 0.2 + 0.8 * np.exp(-5 * t)  # Opens then closes
+            filtered = sawtooth * cutoff_envelope + sawtooth * (1 - cutoff_envelope) * 0.3
+
+            # Add sub-bass for that Moog depth
+            sub = np.sin(2 * np.pi * freq * 0.5 * t)
+
+            bass_note = intensity * (filtered * 0.7 + sub * 0.3) * envelope
 
             track[current_sample:current_sample + bar_duration] = bass_note
 
@@ -719,12 +755,12 @@ class PremiumMusicEngine:
         self, num_samples: int, tempo_bpm: float,
         scale: List[float], intensity: float
     ) -> np.ndarray:
-        """Sequenced bass (16th note pattern)."""
+        """Sequenced bass - plucky square wave with rapid decay (Depeche Mode style)."""
         track = np.zeros(num_samples)
         samples_per_16th = int(15 * self.SAMPLE_RATE / tempo_bpm)
 
-        # Bassline pattern (16ths)
-        note_pattern = [0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0]
+        # Bassline pattern (16ths) - more rhythmic
+        note_pattern = [0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 2, 0, 0, 3, 0, 0]
 
         step_index = 0
         current_sample = 0
@@ -736,13 +772,19 @@ class PremiumMusicEngine:
                 note_duration = min(samples_per_16th, num_samples - current_sample)
                 t = np.arange(note_duration) / self.SAMPLE_RATE
 
-                # Square wave
-                square = np.sign(np.sin(2 * np.pi * freq * t))
+                # Pulse wave (adjustable duty cycle for variation)
+                duty_cycle = 0.25  # Narrow pulse for sharper sound
+                pulse = np.where((t * freq % 1) < duty_cycle, 1, -1)
 
-                # Short envelope
-                envelope = np.exp(-15 * t)
+                # Very short, plucky envelope
+                envelope = np.exp(-20 * t)
 
-                bass_note = intensity * 0.5 * square * envelope
+                # Add slight pitch bend down for pluck character
+                pitch_bend = np.exp(-30 * t) * 0.02  # Small pitch drop
+                freq_modulated = freq * (1 - pitch_bend)
+                pulse = np.where((t * freq_modulated % 1) < duty_cycle, 1, -1)
+
+                bass_note = intensity * 0.6 * pulse * envelope
 
                 end_sample = min(current_sample + note_duration, num_samples)
                 track[current_sample:end_sample] += bass_note[:end_sample - current_sample]
@@ -825,7 +867,7 @@ class PremiumMusicEngine:
         self, num_samples: int, tempo_bpm: float,
         scale: List[float], synth_type: str
     ) -> np.ndarray:
-        """Generate premium synth pads/chords based on type."""
+        """Generate premium synth pads/chords with dramatically different character per type."""
         track = np.zeros(num_samples)
         samples_per_2bars = int(8 * 60 * self.SAMPLE_RATE / tempo_bpm)
 
@@ -845,27 +887,94 @@ class PremiumMusicEngine:
 
             chord_sound = np.zeros(chord_duration)
 
-            # Different synth types
-            if "analog" in synth_type:
-                # Warm analog sound (sawtooth)
-                for freq in chord:
-                    sawtooth = 2 * (t * freq % 1) - 1
-                    chord_sound += 0.06 * sawtooth
-            elif "digital" in synth_type:
-                # Bright digital sound (triangle + sine)
-                for freq in chord:
-                    triangle = 2 * np.abs(2 * (t * freq % 1) - 1) - 1
-                    sine = np.sin(2 * np.pi * freq * t)
-                    chord_sound += 0.05 * (triangle + sine)
-            else:
-                # Default (sine waves)
-                for freq in chord:
-                    chord_sound += 0.07 * np.sin(2 * np.pi * freq * t)
+            # DRAMATICALLY different synth types
+            if synth_type == "dark_analog":
+                # Dark analog: Detuned sawtooth, slow filter, chorus effect
+                for i, freq in enumerate(chord):
+                    # Triple-layer detuned sawtooths
+                    saw1 = 2 * (t * freq * 0.998 % 1) - 1
+                    saw2 = 2 * (t * freq * 1.000 % 1) - 1
+                    saw3 = 2 * (t * freq * 1.002 % 1) - 1
+                    sawtooth = (saw1 + saw2 + saw3) / 3
 
-            # Add subtle vibrato
-            vibrato = 0.003 * np.sin(2 * np.pi * 4.5 * t)
-            for freq in chord:
-                chord_sound += 0.02 * np.sin(2 * np.pi * freq * t * (1 + vibrato))
+                    # Slow filter sweep (darker over time)
+                    filter_env = 0.3 + 0.4 * np.exp(-0.5 * t)
+
+                    chord_sound += 0.08 * sawtooth * filter_env
+
+            elif synth_type == "bright_digital" or synth_type == "polished_digital" or synth_type == "sharp_digital":
+                # Bright digital: DX7-style FM synthesis simulation
+                for freq in chord:
+                    # Carrier and modulator for FM-like sound
+                    modulator_freq = freq * 2.01
+                    modulation_index = 2.0 * np.exp(-1.5 * t)  # Decays over time
+                    modulation = modulation_index * np.sin(2 * np.pi * modulator_freq * t)
+
+                    # Carrier frequency modulated by modulator
+                    carrier = np.sin(2 * np.pi * freq * t + modulation)
+
+                    # Add bell-like partials
+                    partial1 = 0.3 * np.sin(2 * np.pi * freq * 2.76 * t)
+                    partial2 = 0.2 * np.sin(2 * np.pi * freq * 5.40 * t)
+
+                    digital_sound = carrier + partial1 * np.exp(-3 * t) + partial2 * np.exp(-5 * t)
+                    chord_sound += 0.07 * digital_sound
+
+            elif synth_type == "warm_analog" or synth_type == "lush_analog":
+                # Warm analog: Smooth sawtooth with chorus and warmth
+                for freq in chord:
+                    # Dual sawtooth with slight detuning
+                    saw1 = 2 * (t * freq * 0.999 % 1) - 1
+                    saw2 = 2 * (t * freq * 1.001 % 1) - 1
+                    sawtooth = (saw1 + saw2) / 2
+
+                    # Warm filter (always open)
+                    # Add subtle harmonics for warmth
+                    harmonic = 0.2 * np.sin(2 * np.pi * freq * 2 * t)
+
+                    chord_sound += 0.09 * (sawtooth * 0.7 + harmonic * 0.3)
+
+            elif synth_type == "metallic":
+                # Metallic: Ring modulation, harsh harmonics (Gary Numan style)
+                for freq in chord:
+                    # Ring modulation effect
+                    carrier = np.sin(2 * np.pi * freq * t)
+                    modulator = np.sin(2 * np.pi * freq * 1.414 * t)  # Inharmonic ratio
+                    ring_mod = carrier * modulator
+
+                    # Add metallic partials
+                    metallic = ring_mod + 0.3 * np.sin(2 * np.pi * freq * 3.14 * t)
+
+                    chord_sound += 0.06 * metallic
+
+            elif synth_type == "orchestral":
+                # Orchestral: String-like with slow attack
+                for freq in chord:
+                    # Slow attack envelope
+                    attack_time = 0.3  # 300ms attack
+                    attack_samples = int(attack_time * self.SAMPLE_RATE)
+                    attack_env = np.ones(chord_duration)
+                    if chord_duration > attack_samples:
+                        attack_env[:attack_samples] = np.linspace(0, 1, attack_samples) ** 2
+
+                    # String-like sound (filtered sawtooth)
+                    sawtooth = 2 * (t * freq % 1) - 1
+                    # Soft filter
+                    filtered = sawtooth * 0.4 + np.sin(2 * np.pi * freq * t) * 0.6
+
+                    chord_sound += 0.08 * filtered * attack_env
+
+            else:  # Default: precise, clean
+                # Clean sine waves (Kraftwerk style)
+                for freq in chord:
+                    sine = np.sin(2 * np.pi * freq * t)
+                    chord_sound += 0.08 * sine
+
+            # Add subtle vibrato (except for digital/precise types)
+            if "digital" not in synth_type and "precise" not in synth_type and "metallic" not in synth_type:
+                vibrato = 0.004 * np.sin(2 * np.pi * 5.3 * t)
+                for freq in chord:
+                    chord_sound += 0.015 * np.sin(2 * np.pi * freq * t * (1 + vibrato))
 
             track[current_sample:current_sample + chord_duration] = chord_sound
 
