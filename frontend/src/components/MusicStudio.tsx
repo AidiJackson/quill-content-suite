@@ -22,6 +22,11 @@ export function MusicStudio() {
   const [vocalDemo, setVocalDemo] = useState<GenerateVocalsResponse | null>(null);
   const [generatingVocals, setGeneratingVocals] = useState(false);
 
+  // Influence & Intent state
+  const [influenceText, setInfluenceText] = useState('');
+  const [influenceArtists, setInfluenceArtists] = useState<string[]>([]);
+  const [usageContext, setUsageContext] = useState<string>('tiktok');
+
   // Available artists (from backend database)
   const availableArtists = [
     'Depeche Mode',
@@ -44,6 +49,17 @@ export function MusicStudio() {
     );
   };
 
+  // Influence artist options (for producer plan)
+  const influenceArtistOptions = ['Linkin Park', 'Eminem', 'Depeche Mode', 'Kraftwerk', 'Gary Numan', 'Pet Shop Boys'];
+
+  const toggleInfluenceArtist = (artist: string) => {
+    setInfluenceArtists((prev) =>
+      prev.includes(artist)
+        ? prev.filter((a) => a !== artist)
+        : [...prev, artist]
+    );
+  };
+
   const handleGenerate = async () => {
     if (selectedArtists.length === 0) {
       toast.error('Please select at least one artist influence');
@@ -59,6 +75,9 @@ export function MusicStudio() {
         mood: mood || undefined,
         tempo_bpm: tempoBpm ? parseInt(tempoBpm) : undefined,
         reference_text: referenceText || undefined,
+        influence_text: influenceText || undefined,
+        influence_artists: influenceArtists.length > 0 ? influenceArtists : undefined,
+        usage_context: usageContext || undefined,
       };
 
       const result = await apiClient.music.generateTrack(request);
@@ -135,6 +154,72 @@ export function MusicStudio() {
       <div className="grid grid-cols-2 gap-8">
         {/* Left Column - Track Settings */}
         <div className="space-y-6">
+          {/* Influence & Intent Section */}
+          <Card className="p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-200 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <Music className="w-5 h-5 text-indigo-600" />
+              <h4 className="text-slate-900 font-semibold">Influence & Intent</h4>
+            </div>
+            <p className="text-xs text-slate-600 mb-4">
+              Describe what you want in your own words. The producer brain will interpret your influences.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="influence-text" className="text-sm text-slate-700">
+                  Describe Your Track
+                </Label>
+                <Textarea
+                  id="influence-text"
+                  placeholder="e.g., 'Dark emotional track inspired by Linkin Park choruses and Eminem drums. Slower tempo, big cinematic chorus for a TikTok edit.'"
+                  value={influenceText}
+                  onChange={(e) => setInfluenceText(e.target.value)}
+                  rows={3}
+                  className="mt-1.5 resize-none"
+                />
+              </div>
+
+              <div>
+                <Label className="text-sm text-slate-700">
+                  Artist Influences <span className="text-slate-500">(Optional)</span>
+                </Label>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {influenceArtistOptions.map((artist) => (
+                    <Badge
+                      key={artist}
+                      variant={influenceArtists.includes(artist) ? 'default' : 'outline'}
+                      className={`cursor-pointer transition-all text-xs ${
+                        influenceArtists.includes(artist)
+                          ? 'bg-indigo-600 hover:bg-indigo-700'
+                          : 'hover:bg-slate-100'
+                      }`}
+                      onClick={() => toggleInfluenceArtist(artist)}
+                    >
+                      {artist}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="usage-context" className="text-sm text-slate-700">
+                  Usage Context
+                </Label>
+                <Select value={usageContext} onValueChange={setUsageContext}>
+                  <SelectTrigger id="usage-context" className="mt-1.5">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tiktok">TikTok / Shorts</SelectItem>
+                    <SelectItem value="longform">YouTube / Long Form</SelectItem>
+                    <SelectItem value="background">Background / B-roll</SelectItem>
+                    <SelectItem value="full_song">Full Song Demo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </Card>
+
           <Card className="p-6 bg-white border-slate-200 shadow-sm">
             <div className="flex items-center gap-2 mb-6">
               <Music className="w-5 h-5 text-blue-600" />
@@ -348,6 +433,14 @@ export function MusicStudio() {
                     Generated
                   </Badge>
                 </div>
+
+                {/* Producer Plan Summary */}
+                {song.plan_summary && (
+                  <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-200 mt-4">
+                    <Label className="text-xs text-indigo-900 font-semibold uppercase">Producer Plan</Label>
+                    <p className="text-xs text-slate-700 mt-1">{song.plan_summary}</p>
+                  </div>
+                )}
 
                 <div className="space-y-4">
                   {/* Hook */}

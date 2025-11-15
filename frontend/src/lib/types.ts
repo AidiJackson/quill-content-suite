@@ -344,6 +344,12 @@ export interface GenerateTrackRequest {
   tempo_bpm?: number;
   reference_text?: string;
   sections?: string[];
+
+  // Influence & Intent fields
+  influence_text?: string;  // Natural language description of desired track
+  influence_artists?: string[];  // Artist influences for producer plan
+  usage_context?: string;  // e.g., "tiktok", "full_song", "background"
+
   project_id?: string;
 }
 
@@ -361,6 +367,7 @@ export interface GenerateTrackResponse {
   chorus: string;
   sections: MusicSection[];
   fake_audio_url: string;
+  plan_summary?: string;  // Summary of how influences were interpreted
   saved_media_id?: string;
 }
 
