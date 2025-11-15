@@ -328,3 +328,178 @@ def test_artist_style_auto_detect(client: TestClient):
     # Should auto-detect artist_style from first artist
     assert "artist_style" in data
     assert data["artist_style"] == "gary_numan"
+
+
+# ==================== ADVANCED SYNTH ENGINE TESTS ====================
+
+
+def test_advanced_engine_track_duration(client: TestClient):
+    """Test that advanced synth engine generates 40-60 second tracks."""
+    import soundfile as sf
+
+    response = client.post(
+        "/api/music/generate",
+        json={
+            "artist_influences": ["Depeche Mode"],
+            "mood": "dark",
+        },
+        headers={"X-User-Id": "test-user"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # Get audio file
+    audio_url = data["fake_audio_url"]
+    filename = audio_url.split("/")[-1]
+    static_dir = Path(__file__).parent.parent / "static" / "audio" / "music"
+    file_path = static_dir / filename
+
+    assert file_path.exists(), "Audio file not found"
+
+    # Read audio file to check duration
+    audio_data, sample_rate = sf.read(str(file_path))
+    duration_seconds = len(audio_data) / sample_rate
+
+    # Should be between 30 and 70 seconds (target is 40-60)
+    assert 30 <= duration_seconds <= 70, f"Duration {duration_seconds}s not in range 30-70s"
+
+
+def test_advanced_engine_not_silent(client: TestClient):
+    """Test that generated tracks are not silent."""
+    import soundfile as sf
+    import numpy as np
+
+    response = client.post(
+        "/api/music/generate",
+        json={
+            "artist_influences": ["Pet Shop Boys"],
+            "mood": "sophisticated",
+        },
+        headers={"X-User-Id": "test-user"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # Get audio file
+    audio_url = data["fake_audio_url"]
+    filename = audio_url.split("/")[-1]
+    static_dir = Path(__file__).parent.parent / "static" / "audio" / "music"
+    file_path = static_dir / filename
+
+    assert file_path.exists(), "Audio file not found"
+
+    # Read audio file
+    audio_data, sample_rate = sf.read(str(file_path))
+
+    # Check that audio is not silent (max amplitude > small epsilon)
+    max_amplitude = np.max(np.abs(audio_data))
+    assert max_amplitude > 0.01, f"Audio appears to be silent (max amplitude: {max_amplitude})"
+
+
+def test_advanced_engine_different_styles_produce_different_audio(client: TestClient):
+    """Test that different artist styles produce audibly different tracks."""
+    import soundfile as sf
+    import numpy as np
+
+    # Generate tracks with different artist styles
+    styles_and_artists = [
+        ("depeche_mode", ["Depeche Mode"], "dark"),
+        ("kraftwerk", ["Kraftwerk"], "mechanical"),
+        ("gary_numan", ["Gary Numan"], "dystopian"),
+    ]
+
+    audio_files = []
+
+    for style, artists, mood in styles_and_artists:
+        response = client.post(
+            "/api/music/generate",
+            json={
+                "artist_influences": artists,
+                "artist_style": style,
+                "mood": mood,
+                "tempo_bpm": 120,  # Keep tempo constant
+            },
+            headers={"X-User-Id": "test-user"},
+        )
+
+        assert response.status_code == 200, f"Failed for style: {style}"
+        data = response.json()
+
+        # Get audio file
+        audio_url = data["fake_audio_url"]
+        filename = audio_url.split("/")[-1]
+        static_dir = Path(__file__).parent.parent / "static" / "audio" / "music"
+        file_path = static_dir / filename
+
+        assert file_path.exists(), f"Audio file not found for style {style}"
+
+        # Read audio file
+        audio_data, sample_rate = sf.read(str(file_path))
+        audio_files.append((style, audio_data))
+
+    # Compare audio files to ensure they're different
+    # Use simple statistics to verify they're not identical
+    for i in range(len(audio_files)):
+        for j in range(i + 1, len(audio_files)):
+            style_a, audio_a = audio_files[i]
+            style_b, audio_b = audio_files[j]
+
+            # Ensure lengths are similar (they should all be ~40-60s)
+            min_len = min(len(audio_a), len(audio_b))
+
+            # Compare first 10 seconds (truncate to same length)
+            samples_to_compare = min(min_len, 44100 * 10)
+            audio_a_slice = audio_a[:samples_to_compare]
+            audio_b_slice = audio_b[:samples_to_compare]
+
+            # Flatten to mono if stereo
+            if len(audio_a_slice.shape) > 1:
+                audio_a_slice = np.mean(audio_a_slice, axis=1)
+            if len(audio_b_slice.shape) > 1:
+                audio_b_slice = np.mean(audio_b_slice, axis=1)
+
+            # Check that they're not identical (correlation should be < 0.95)
+            if len(audio_a_slice) == len(audio_b_slice):
+                correlation = np.corrcoef(audio_a_slice, audio_b_slice)[0, 1]
+                assert correlation < 0.95, \
+                    f"Tracks for {style_a} and {style_b} are too similar (correlation: {correlation})"
+
+
+def test_magic_track_endpoint_advanced_engine(client: TestClient):
+    """Test that /api/music/magic endpoint also uses advanced engine."""
+    import soundfile as sf
+    import numpy as np
+
+    response = client.post(
+        "/api/music/magic",
+        json={
+            "artist_influences": ["New Order"],
+            "influence_text": "dark electronic with driving bassline",
+            "usage_context": "background music",
+        },
+        headers={"X-User-Id": "test-user"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # Check audio file exists
+    audio_url = data["fake_audio_url"]
+    filename = audio_url.split("/")[-1]
+    static_dir = Path(__file__).parent.parent / "static" / "audio" / "music"
+    file_path = static_dir / filename
+
+    assert file_path.exists(), "Audio file not found for magic track"
+
+    # Read audio file
+    audio_data, sample_rate = sf.read(str(file_path))
+    duration_seconds = len(audio_data) / sample_rate
+
+    # Should be between 30 and 70 seconds
+    assert 30 <= duration_seconds <= 70, f"Duration {duration_seconds}s not in range 30-70s"
+
+    # Should not be silent
+    max_amplitude = np.max(np.abs(audio_data))
+    assert max_amplitude > 0.01, f"Audio appears to be silent (max amplitude: {max_amplitude})"
