@@ -336,8 +336,10 @@ export interface MusicSection {
 }
 
 export interface GenerateTrackRequest {
-  genre: string;
-  mood: string;
+  artist_influences: string[];  // e.g., ["Depeche Mode", "Gary Numan"]
+  instruments?: string[];  // e.g., ["analog_synth", "808", "arpeggiator"]
+  production_era?: string;  // e.g., "mid_80s_digital", "early_80s_analog"
+  mood?: string;  // e.g., "dark", "melancholic", "uplifting"
   tempo_bpm?: number;
   reference_text?: string;
   sections?: string[];
@@ -347,9 +349,11 @@ export interface GenerateTrackRequest {
 export interface GenerateTrackResponse {
   track_id: string;
   title: string;
-  genre: string;
+  artist_influences: string[];  // Artists that influenced this track
+  instruments: string[];  // Instruments used in the track
+  production_era: string;  // Production era style
   mood: string;
-  tempo_bpm?: number;
+  tempo_bpm: number;
   vocal_style: VocalStyle;
   hook: string;
   chorus: string;

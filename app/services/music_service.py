@@ -21,90 +21,224 @@ AUDIO_DIR = Path(__file__).parent.parent.parent / "static" / "audio" / "music"
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
 
-class ProceduralMusicEngine:
+class PremiumMusicEngine:
     """
-    Procedural music composition engine.
+    Premium artist-influenced procedural music engine.
 
-    Generates simple instrumental backing tracks using NumPy,
-    with genre-specific drums, bass, and optional pads.
+    Generates high-quality electronic/synthwave backing tracks with:
+    - Artist-specific sound characteristics
+    - Authentic 808/909/LinnDrum synthesis
+    - ADSR envelopes and filter sweeps
+    - Advanced production techniques (sidechain, gated reverb)
+    - Era-specific production styles
     """
 
     SAMPLE_RATE = 44100
 
-    # Genre-specific musical parameters
-    GENRE_PARAMS = {
-        "trap": {
-            "scale": [55, 65.4, 73.4, 82.4, 98, 110],  # A minor pentatonic (bass)
-            "kick_pattern": [1, 0, 0, 0, 1, 0, 1, 0],  # More kicks for trap
-            "snare_pattern": [0, 0, 1, 0, 0, 0, 1, 0],
-            "hihat_pattern": [1, 1, 1, 1, 1, 1, 1, 1],  # Constant hats
-            "bass_intensity": 0.4,
+    # Premium Artist Database (10 artists from 80s electronic/synthwave era)
+    ARTIST_DATABASE = {
+        "depeche_mode": {
+            "name": "Depeche Mode",
+            "tempo_range": (110, 125),
+            "scales": [[55, 65.4, 73.4, 77.8, 87.3, 98]],  # A minor (dark)
+            "instruments": ["analog_synth", "808", "sequencer", "bass_synth"],
+            "production_era": "mid_80s_digital",
+            "mood": "dark",
+            "characteristics": {
+                "bass_style": "sequenced",
+                "synth_type": "dark_analog",
+                "drum_machine": "808",
+                "use_sidechain": True,
+                "use_gated_reverb": True,
+            }
         },
-        "drill": {
-            "scale": [49, 58.3, 65.4, 73.4, 87.3, 98],  # G minor pentatonic
-            "kick_pattern": [1, 0, 1, 0, 1, 0, 0, 0],
-            "snare_pattern": [0, 0, 1, 0, 0, 0, 1, 0],
-            "hihat_pattern": [1, 1, 1, 1, 1, 1, 1, 1],
-            "bass_intensity": 0.5,
+        "gary_numan": {
+            "name": "Gary Numan",
+            "tempo_range": (115, 130),
+            "scales": [[49, 58.3, 65.4, 73.4, 77.8, 87.3]],  # G minor (dystopian)
+            "instruments": ["moog", "prophet5", "909", "arpeggiator"],
+            "production_era": "early_80s_analog",
+            "mood": "dystopian",
+            "characteristics": {
+                "bass_style": "analog_moog",
+                "synth_type": "metallic",
+                "drum_machine": "909",
+                "use_sidechain": False,
+                "use_gated_reverb": False,
+            }
         },
-        "pop": {
-            "scale": [65.4, 73.4, 82.4, 87.3, 98, 110],  # C major
-            "kick_pattern": [1, 0, 0, 0, 1, 0, 0, 0],
-            "snare_pattern": [0, 0, 1, 0, 0, 0, 1, 0],
-            "hihat_pattern": [0, 1, 0, 1, 0, 1, 0, 1],
-            "bass_intensity": 0.3,
+        "kraftwerk": {
+            "name": "Kraftwerk",
+            "tempo_range": (120, 130),
+            "scales": [[65.4, 73.4, 82.4, 87.3, 98, 110]],  # C major (robotic)
+            "instruments": ["vocoder", "808", "sequencer", "arpeggiator"],
+            "production_era": "early_80s_analog",
+            "mood": "mechanical",
+            "characteristics": {
+                "bass_style": "sequenced",
+                "synth_type": "precise",
+                "drum_machine": "808",
+                "use_sidechain": False,
+                "use_gated_reverb": False,
+            }
         },
-        "lofi": {
-            "scale": [55, 61.7, 69.3, 82.4, 92.5, 110],  # A minor (jazzy)
-            "kick_pattern": [1, 0, 0, 0, 0, 0, 1, 0],
-            "snare_pattern": [0, 0, 0, 1, 0, 0, 0, 1],
-            "hihat_pattern": [0, 0, 1, 0, 0, 0, 1, 0],  # Sparse
-            "bass_intensity": 0.25,
+        "new_order": {
+            "name": "New Order",
+            "tempo_range": (115, 128),
+            "scales": [[55, 61.7, 65.4, 73.4, 82.4, 87.3]],  # A minor (upbeat)
+            "instruments": ["dx7", "808", "sequencer", "bass_guitar"],
+            "production_era": "mid_80s_digital",
+            "mood": "melancholic",
+            "characteristics": {
+                "bass_style": "driving",
+                "synth_type": "bright_digital",
+                "drum_machine": "808",
+                "use_sidechain": True,
+                "use_gated_reverb": True,
+            }
         },
-        "edm": {
-            "scale": [49, 58.3, 65.4, 77.8, 87.3, 98],  # G major
-            "kick_pattern": [1, 0, 0, 0, 1, 0, 0, 0],
-            "snare_pattern": [0, 0, 1, 0, 0, 0, 1, 0],
-            "hihat_pattern": [1, 1, 1, 1, 1, 1, 1, 1],
-            "bass_intensity": 0.4,
+        "pet_shop_boys": {
+            "name": "Pet Shop Boys",
+            "tempo_range": (118, 125),
+            "scales": [[58.3, 65.4, 73.4, 77.8, 87.3, 98]],  # Bb major (pop)
+            "instruments": ["dx7", "linn_drum", "sequencer", "bass_synth"],
+            "production_era": "mid_80s_digital",
+            "mood": "sophisticated",
+            "characteristics": {
+                "bass_style": "synth_bass",
+                "synth_type": "polished_digital",
+                "drum_machine": "linn_drum",
+                "use_sidechain": True,
+                "use_gated_reverb": True,
+            }
         },
-        "rnb": {
-            "scale": [58.3, 65.4, 73.4, 77.8, 87.3, 98],  # Bb major
-            "kick_pattern": [1, 0, 0, 0, 0, 1, 0, 0],
-            "snare_pattern": [0, 0, 1, 0, 0, 0, 1, 0],
-            "hihat_pattern": [0, 1, 0, 1, 0, 1, 0, 1],
-            "bass_intensity": 0.3,
+        "human_league": {
+            "name": "The Human League",
+            "tempo_range": (110, 120),
+            "scales": [[65.4, 69.3, 73.4, 82.4, 87.3, 98]],  # C major (romantic)
+            "instruments": ["roland_system", "linn_drum", "sequencer", "bass_synth"],
+            "production_era": "early_80s_analog",
+            "mood": "romantic",
+            "characteristics": {
+                "bass_style": "synth_bass",
+                "synth_type": "warm_analog",
+                "drum_machine": "linn_drum",
+                "use_sidechain": False,
+                "use_gated_reverb": True,
+            }
         },
-        "hiphop": {
-            "scale": [55, 65.4, 73.4, 82.4, 98, 110],  # A minor
-            "kick_pattern": [1, 0, 0, 0, 1, 0, 0, 0],
-            "snare_pattern": [0, 0, 1, 0, 0, 0, 1, 0],
-            "hihat_pattern": [0, 1, 0, 1, 0, 1, 0, 1],
-            "bass_intensity": 0.35,
+        "omd": {
+            "name": "Orchestral Manoeuvres in the Dark",
+            "tempo_range": (115, 125),
+            "scales": [[49, 58.3, 61.7, 69.3, 77.8, 87.3]],  # G minor (atmospheric)
+            "instruments": ["mellotron", "808", "sequencer", "bass_synth"],
+            "production_era": "early_80s_analog",
+            "mood": "atmospheric",
+            "characteristics": {
+                "bass_style": "melodic",
+                "synth_type": "orchestral",
+                "drum_machine": "808",
+                "use_sidechain": False,
+                "use_gated_reverb": True,
+            }
         },
-        "afrobeat": {
-            "scale": [65.4, 73.4, 82.4, 98, 110, 130.8],  # C major
-            "kick_pattern": [1, 0, 1, 0, 1, 0, 0, 1],
-            "snare_pattern": [0, 0, 1, 0, 0, 1, 0, 0],
-            "hihat_pattern": [1, 1, 1, 1, 1, 1, 1, 1],
-            "bass_intensity": 0.35,
+        "tears_for_fears": {
+            "name": "Tears for Fears",
+            "tempo_range": (100, 115),
+            "scales": [[55, 61.7, 65.4, 73.4, 77.8, 87.3]],  # A minor (emotive)
+            "instruments": ["prophet5", "linn_drum", "arpeggiator", "bass_synth"],
+            "production_era": "mid_80s_digital",
+            "mood": "emotive",
+            "characteristics": {
+                "bass_style": "powerful",
+                "synth_type": "lush_analog",
+                "drum_machine": "linn_drum",
+                "use_sidechain": True,
+                "use_gated_reverb": True,
+            }
+        },
+        "eurythmics": {
+            "name": "Eurythmics",
+            "tempo_range": (108, 122),
+            "scales": [[58.3, 65.4, 69.3, 77.8, 82.4, 92.5]],  # Bb major (powerful)
+            "instruments": ["dx7", "808", "sequencer", "bass_synth"],
+            "production_era": "mid_80s_digital",
+            "mood": "powerful",
+            "characteristics": {
+                "bass_style": "driving",
+                "synth_type": "sharp_digital",
+                "drum_machine": "808",
+                "use_sidechain": True,
+                "use_gated_reverb": True,
+            }
+        },
+        "yazoo": {
+            "name": "Yazoo",
+            "tempo_range": (112, 125),
+            "scales": [[65.4, 73.4, 77.8, 82.4, 87.3, 98]],  # C major (uplifting)
+            "instruments": ["moog", "808", "sequencer", "bass_synth"],
+            "production_era": "early_80s_analog",
+            "mood": "uplifting",
+            "characteristics": {
+                "bass_style": "analog_moog",
+                "synth_type": "warm_analog",
+                "drum_machine": "808",
+                "use_sidechain": False,
+                "use_gated_reverb": False,
+            }
+        },
+    }
+
+    # Preset Kits for Beta (not artist-specific names, but style-specific)
+    PRESET_KITS = {
+        "dark_synthpop": {
+            "artists": ["depeche_mode", "gary_numan"],
+            "instruments": ["analog_synth", "808", "sequencer"],
+            "mood": "dark",
+            "production_era": "mid_80s_digital",
+        },
+        "new_romantic": {
+            "artists": ["human_league", "tears_for_fears"],
+            "instruments": ["prophet5", "linn_drum", "arpeggiator"],
+            "mood": "romantic",
+            "production_era": "early_80s_analog",
+        },
+        "electro_pop": {
+            "artists": ["pet_shop_boys", "eurythmics"],
+            "instruments": ["dx7", "808", "sequencer"],
+            "mood": "sophisticated",
+            "production_era": "mid_80s_digital",
+        },
+        "synth_wave": {
+            "artists": ["kraftwerk", "new_order"],
+            "instruments": ["sequencer", "808", "bass_synth"],
+            "mood": "mechanical",
+            "production_era": "early_80s_analog",
+        },
+        "darkwave": {
+            "artists": ["omd", "gary_numan"],
+            "instruments": ["mellotron", "808", "bass_synth"],
+            "mood": "atmospheric",
+            "production_era": "early_80s_analog",
         },
     }
 
     def generate_backing_track(self, request: MusicGenerateRequest) -> str:
         """
-        Generate a procedural backing track based on genre, mood, and tempo.
+        Generate premium artist-influenced backing track.
 
         Args:
-            request: Music generation request with genre, mood, tempo_bpm
+            request: Music generation request with artist_influences, instruments, etc.
 
         Returns:
             URL path to the generated audio file
         """
         try:
-            # Get parameters
-            genre = request.genre.lower()
-            tempo_bpm = request.tempo_bpm or 120
+            # Resolve artist influences to musical parameters
+            params = self._resolve_artist_params(request)
+
+            # Get tempo (auto-detect from artist if not provided)
+            tempo_bpm = request.tempo_bpm or params["tempo_bpm"]
 
             # Calculate timing
             bars = 8
@@ -112,21 +246,58 @@ class ProceduralMusicEngine:
             duration_seconds = bars * beats_per_bar * 60 / tempo_bpm
             num_samples = int(duration_seconds * self.SAMPLE_RATE)
 
-            # Get genre parameters (default to pop if not found)
-            params = self.GENRE_PARAMS.get(genre, self.GENRE_PARAMS["pop"])
+            # Generate premium track components based on drum machine type
+            kick = self._generate_premium_kick(
+                num_samples, tempo_bpm,
+                params["kick_pattern"],
+                params["drum_machine"]
+            )
+            snare = self._generate_premium_snare(
+                num_samples, tempo_bpm,
+                params["snare_pattern"],
+                params["drum_machine"]
+            )
+            hihat = self._generate_premium_hihat(
+                num_samples, tempo_bpm,
+                params["hihat_pattern"],
+                params["drum_machine"]
+            )
 
-            # Generate track components
-            kick = self._generate_kick(num_samples, tempo_bpm, params["kick_pattern"])
-            snare = self._generate_snare(num_samples, tempo_bpm, params["snare_pattern"])
-            hihat = self._generate_hihat(num_samples, tempo_bpm, params["hihat_pattern"])
-            bass = self._generate_bass(num_samples, tempo_bpm, params["scale"], params["bass_intensity"])
+            # Generate bass based on artist style
+            bass = self._generate_premium_bass(
+                num_samples, tempo_bpm,
+                params["scale"],
+                params["bass_style"],
+                params["bass_intensity"]
+            )
 
-            # Add pad for uplifting/dreamy moods
-            if request.mood.lower() in ["uplifting", "dreamy", "emotional"]:
-                pad = self._generate_pad(num_samples, tempo_bpm, params["scale"])
-                mix = kick + snare + hihat + bass + pad
+            # Generate synth layers based on synth type
+            synth = self._generate_premium_synth(
+                num_samples, tempo_bpm,
+                params["scale"],
+                params["synth_type"]
+            )
+
+            # Add arpeggiator if in instruments
+            if "arpeggiator" in params["instruments"]:
+                arp = self._generate_arpeggiator(
+                    num_samples, tempo_bpm, params["scale"]
+                )
+                mix = kick + snare + hihat + bass + synth + arp
             else:
-                mix = kick + snare + hihat + bass
+                mix = kick + snare + hihat + bass + synth
+
+            # Apply sidechain compression if enabled
+            if params["use_sidechain"]:
+                mix = self._apply_sidechain(mix, kick, strength=0.4)
+
+            # Apply gated reverb if enabled
+            if params["use_gated_reverb"]:
+                snare = self._apply_gated_reverb(snare, gate_time=0.15)
+                # Re-mix with processed snare
+                mix = kick + snare + hihat + bass + synth
+                if "arpeggiator" in params["instruments"]:
+                    mix = mix + arp
 
             # Normalize to prevent clipping
             max_val = np.max(np.abs(mix))
@@ -134,14 +305,14 @@ class ProceduralMusicEngine:
                 mix = mix / max_val * 0.85  # Leave headroom
 
             # Apply fade in/out
-            fade_samples = int(0.5 * self.SAMPLE_RATE)  # 0.5 second fade
+            fade_samples = int(0.5 * self.SAMPLE_RATE)
             fade_in = np.linspace(0, 1, fade_samples)
             fade_out = np.linspace(1, 0, fade_samples)
             mix[:fade_samples] *= fade_in
             mix[-fade_samples:] *= fade_out
 
             # Generate track ID
-            track_input = f"{request.genre}{request.mood}{request.reference_text or ''}"
+            track_input = f"{'_'.join(request.artist_influences)}{request.mood or ''}{request.reference_text or ''}"
             track_id = hashlib.md5(track_input.encode()).hexdigest()[:12]
 
             # Save to file
@@ -149,16 +320,131 @@ class ProceduralMusicEngine:
             file_path = AUDIO_DIR / filename
             sf.write(str(file_path), mix, self.SAMPLE_RATE)
 
-            logger.info(f"Generated procedural track: {track_id} ({genre}, {tempo_bpm} BPM, {duration_seconds:.1f}s)")
+            logger.info(
+                f"Generated premium track: {track_id} "
+                f"(artists={', '.join(request.artist_influences)}, "
+                f"{tempo_bpm} BPM, {duration_seconds:.1f}s)"
+            )
 
             return f"/static/audio/music/{filename}"
 
         except Exception as e:
-            logger.error(f"Failed to generate procedural music: {e}")
-            return f"/static/audio/music/placeholder.wav"
+            logger.error(f"Failed to generate premium music: {e}")
+            raise
 
-    def _generate_kick(self, num_samples: int, tempo_bpm: float, pattern: List[int]) -> np.ndarray:
-        """Generate kick drum track."""
+    def _resolve_artist_params(self, request: MusicGenerateRequest) -> Dict[str, Any]:
+        """
+        Resolve artist influences to concrete musical parameters.
+
+        Combines characteristics from multiple artists and applies overrides.
+        """
+        # Normalize artist names to database keys
+        artist_keys = []
+        for artist in request.artist_influences:
+            # Convert "Depeche Mode" -> "depeche_mode"
+            key = artist.lower().replace(" ", "_").replace("the_", "")
+            if key in self.ARTIST_DATABASE:
+                artist_keys.append(key)
+
+        # Fallback to default if no valid artists
+        if not artist_keys:
+            artist_keys = ["depeche_mode"]  # Default to Depeche Mode
+
+        # Get primary artist (first in list)
+        primary = self.ARTIST_DATABASE[artist_keys[0]]
+
+        # Merge characteristics from multiple artists
+        merged_instruments = set(primary["instruments"])
+        merged_scales = primary["scales"]
+
+        for key in artist_keys[1:]:
+            artist = self.ARTIST_DATABASE[key]
+            merged_instruments.update(artist["instruments"])
+
+        # Override instruments if user specified
+        if request.instruments:
+            final_instruments = request.instruments
+        else:
+            final_instruments = list(merged_instruments)
+
+        # Override mood if user specified
+        final_mood = request.mood or primary["mood"]
+
+        # Override production_era if user specified
+        final_era = request.production_era or primary["production_era"]
+
+        # Select scale (use primary artist's scale)
+        scale = merged_scales[0]
+
+        # Determine tempo (average of all artists' ranges)
+        tempo_ranges = [self.ARTIST_DATABASE[k]["tempo_range"] for k in artist_keys]
+        avg_min = int(np.mean([r[0] for r in tempo_ranges]))
+        avg_max = int(np.mean([r[1] for r in tempo_ranges]))
+        default_tempo = (avg_min + avg_max) // 2
+
+        # Determine drum patterns based on mood and era
+        kick_pattern, snare_pattern, hihat_pattern = self._get_drum_patterns(final_mood, final_era)
+
+        # Determine drum machine
+        drum_machine = primary["characteristics"]["drum_machine"]
+
+        # Determine bass style and intensity
+        bass_style = primary["characteristics"]["bass_style"]
+        bass_intensity = 0.4 if "powerful" in final_mood else 0.35
+
+        # Determine synth type
+        synth_type = primary["characteristics"]["synth_type"]
+
+        return {
+            "artist_keys": artist_keys,
+            "instruments": final_instruments,
+            "scale": scale,
+            "tempo_bpm": default_tempo,
+            "mood": final_mood,
+            "production_era": final_era,
+            "kick_pattern": kick_pattern,
+            "snare_pattern": snare_pattern,
+            "hihat_pattern": hihat_pattern,
+            "drum_machine": drum_machine,
+            "bass_style": bass_style,
+            "bass_intensity": bass_intensity,
+            "synth_type": synth_type,
+            "use_sidechain": primary["characteristics"]["use_sidechain"],
+            "use_gated_reverb": primary["characteristics"]["use_gated_reverb"],
+        }
+
+    def _get_drum_patterns(self, mood: str, era: str) -> tuple:
+        """Get era and mood-appropriate drum patterns."""
+        # Dark/dystopian moods
+        if mood in ["dark", "dystopian", "atmospheric"]:
+            kick_pattern = [1, 0, 0, 0, 1, 0, 1, 0]
+            snare_pattern = [0, 0, 1, 0, 0, 0, 1, 0]
+            hihat_pattern = [1, 1, 1, 1, 1, 1, 1, 1]
+        # Uplifting/romantic moods
+        elif mood in ["uplifting", "romantic", "emotive"]:
+            kick_pattern = [1, 0, 0, 0, 1, 0, 0, 0]
+            snare_pattern = [0, 0, 1, 0, 0, 0, 1, 0]
+            hihat_pattern = [0, 1, 0, 1, 0, 1, 0, 1]
+        # Mechanical/precise moods
+        elif mood in ["mechanical", "sophisticated"]:
+            kick_pattern = [1, 0, 0, 0, 1, 0, 0, 0]
+            snare_pattern = [0, 0, 1, 0, 0, 0, 1, 0]
+            hihat_pattern = [1, 1, 1, 1, 1, 1, 1, 1]
+        # Default pattern
+        else:
+            kick_pattern = [1, 0, 0, 0, 1, 0, 0, 0]
+            snare_pattern = [0, 0, 1, 0, 0, 0, 1, 0]
+            hihat_pattern = [0, 1, 0, 1, 0, 1, 0, 1]
+
+        return kick_pattern, snare_pattern, hihat_pattern
+
+    # ========== PREMIUM DRUM SYNTHESIS ==========
+
+    def _generate_premium_kick(
+        self, num_samples: int, tempo_bpm: float,
+        pattern: List[int], drum_machine: str
+    ) -> np.ndarray:
+        """Generate authentic 808/909/LinnDrum kick."""
         track = np.zeros(num_samples)
         samples_per_beat = int(60 * self.SAMPLE_RATE / tempo_bpm)
 
@@ -167,14 +453,14 @@ class ProceduralMusicEngine:
 
         while current_sample < num_samples:
             if pattern[beat_index % len(pattern)] == 1:
-                # Create kick: low frequency sine with exponential decay
-                kick_duration = int(0.15 * self.SAMPLE_RATE)
-                t = np.arange(kick_duration) / self.SAMPLE_RATE
-                freq = 60  # Low frequency
-                envelope = np.exp(-10 * t)  # Fast decay
-                kick = 0.8 * np.sin(2 * np.pi * freq * t * (1 - 0.7 * t)) * envelope
+                if drum_machine == "808":
+                    kick = self._808_kick()
+                elif drum_machine == "909":
+                    kick = self._909_kick()
+                else:  # linn_drum
+                    kick = self._linn_kick()
 
-                end_sample = min(current_sample + kick_duration, num_samples)
+                end_sample = min(current_sample + len(kick), num_samples)
                 actual_duration = end_sample - current_sample
                 track[current_sample:end_sample] += kick[:actual_duration]
 
@@ -183,8 +469,76 @@ class ProceduralMusicEngine:
 
         return track
 
-    def _generate_snare(self, num_samples: int, tempo_bpm: float, pattern: List[int]) -> np.ndarray:
-        """Generate snare drum track."""
+    def _808_kick(self) -> np.ndarray:
+        """Authentic TR-808 kick synthesis."""
+        duration = int(0.3 * self.SAMPLE_RATE)
+        t = np.arange(duration) / self.SAMPLE_RATE
+
+        # Pitch envelope (frequency sweep from 150Hz down to 40Hz)
+        freq_start = 150
+        freq_end = 40
+        freq_env = freq_start * np.exp(-7 * t) + freq_end
+
+        # Amplitude envelope (exponential decay)
+        amp_env = np.exp(-6 * t)
+
+        # Sine oscillator with pitch envelope
+        phase = 2 * np.pi * np.cumsum(freq_env) / self.SAMPLE_RATE
+        kick = 0.9 * np.sin(phase) * amp_env
+
+        # Add click/attack transient
+        click = np.exp(-300 * t) * np.random.randn(duration) * 0.1
+        kick = kick + click
+
+        return kick
+
+    def _909_kick(self) -> np.ndarray:
+        """Authentic TR-909 kick synthesis."""
+        duration = int(0.25 * self.SAMPLE_RATE)
+        t = np.arange(duration) / self.SAMPLE_RATE
+
+        # Sharper pitch envelope
+        freq_start = 180
+        freq_end = 50
+        freq_env = freq_start * np.exp(-10 * t) + freq_end
+
+        # Tighter amplitude envelope
+        amp_env = np.exp(-8 * t)
+
+        # Sine oscillator
+        phase = 2 * np.pi * np.cumsum(freq_env) / self.SAMPLE_RATE
+        kick = 0.85 * np.sin(phase) * amp_env
+
+        # More pronounced click
+        click = np.exp(-400 * t) * np.random.randn(duration) * 0.15
+        kick = kick + click
+
+        return kick
+
+    def _linn_kick(self) -> np.ndarray:
+        """LinnDrum kick synthesis."""
+        duration = int(0.2 * self.SAMPLE_RATE)
+        t = np.arange(duration) / self.SAMPLE_RATE
+
+        # Subtle pitch envelope
+        freq_start = 120
+        freq_end = 45
+        freq_env = freq_start * np.exp(-5 * t) + freq_end
+
+        # Natural-sounding envelope
+        amp_env = np.exp(-5 * t)
+
+        # Sine oscillator
+        phase = 2 * np.pi * np.cumsum(freq_env) / self.SAMPLE_RATE
+        kick = 0.8 * np.sin(phase) * amp_env
+
+        return kick
+
+    def _generate_premium_snare(
+        self, num_samples: int, tempo_bpm: float,
+        pattern: List[int], drum_machine: str
+    ) -> np.ndarray:
+        """Generate authentic snare based on drum machine."""
         track = np.zeros(num_samples)
         samples_per_beat = int(60 * self.SAMPLE_RATE / tempo_bpm)
 
@@ -193,14 +547,14 @@ class ProceduralMusicEngine:
 
         while current_sample < num_samples:
             if pattern[beat_index % len(pattern)] == 1:
-                # Create snare: noise burst with envelope
-                snare_duration = int(0.1 * self.SAMPLE_RATE)
-                t = np.arange(snare_duration) / self.SAMPLE_RATE
-                noise = np.random.randn(snare_duration)
-                envelope = np.exp(-20 * t)
-                snare = 0.3 * noise * envelope
+                if drum_machine == "808":
+                    snare = self._808_snare()
+                elif drum_machine == "909":
+                    snare = self._909_snare()
+                else:  # linn_drum
+                    snare = self._linn_snare()
 
-                end_sample = min(current_sample + snare_duration, num_samples)
+                end_sample = min(current_sample + len(snare), num_samples)
                 actual_duration = end_sample - current_sample
                 track[current_sample:end_sample] += snare[:actual_duration]
 
@@ -209,8 +563,69 @@ class ProceduralMusicEngine:
 
         return track
 
-    def _generate_hihat(self, num_samples: int, tempo_bpm: float, pattern: List[int]) -> np.ndarray:
-        """Generate hi-hat track."""
+    def _808_snare(self) -> np.ndarray:
+        """Authentic TR-808 snare (metallic, filtered noise)."""
+        duration = int(0.15 * self.SAMPLE_RATE)
+        t = np.arange(duration) / self.SAMPLE_RATE
+
+        # Two oscillators at dissonant frequencies
+        tone1 = np.sin(2 * np.pi * 180 * t)
+        tone2 = np.sin(2 * np.pi * 330 * t)
+
+        # White noise component
+        noise = np.random.randn(duration)
+
+        # Envelope
+        envelope = np.exp(-25 * t)
+
+        # Mix (808 is more tonal than other snares)
+        snare = 0.4 * (0.6 * (tone1 + tone2) + 0.4 * noise) * envelope
+
+        return snare
+
+    def _909_snare(self) -> np.ndarray:
+        """Authentic TR-909 snare (crisp, bright)."""
+        duration = int(0.12 * self.SAMPLE_RATE)
+        t = np.arange(duration) / self.SAMPLE_RATE
+
+        # Tonal component (single oscillator)
+        tone = np.sin(2 * np.pi * 200 * t)
+
+        # White noise (more prominent)
+        noise = np.random.randn(duration)
+
+        # Sharp envelope
+        envelope = np.exp(-30 * t)
+
+        # Mix (909 is noisier and crisper)
+        snare = 0.45 * (0.3 * tone + 0.7 * noise) * envelope
+
+        return snare
+
+    def _linn_snare(self) -> np.ndarray:
+        """LinnDrum snare (natural, less synthetic)."""
+        duration = int(0.18 * self.SAMPLE_RATE)
+        t = np.arange(duration) / self.SAMPLE_RATE
+
+        # Natural-sounding noise
+        noise = np.random.randn(duration)
+
+        # Gentle tonal component
+        tone = np.sin(2 * np.pi * 220 * t)
+
+        # Natural envelope
+        envelope = np.exp(-15 * t)
+
+        # Mix (more natural balance)
+        snare = 0.4 * (0.25 * tone + 0.75 * noise) * envelope
+
+        return snare
+
+    def _generate_premium_hihat(
+        self, num_samples: int, tempo_bpm: float,
+        pattern: List[int], drum_machine: str
+    ) -> np.ndarray:
+        """Generate authentic hi-hat."""
         track = np.zeros(num_samples)
         samples_per_beat = int(60 * self.SAMPLE_RATE / tempo_bpm)
 
@@ -219,13 +634,16 @@ class ProceduralMusicEngine:
 
         while current_sample < num_samples:
             if pattern[beat_index % len(pattern)] == 1:
-                # Create hi-hat: high-frequency noise burst
-                hihat_duration = int(0.05 * self.SAMPLE_RATE)
+                # All drum machines have similar hi-hats (metallic noise)
+                hihat_duration = int(0.06 * self.SAMPLE_RATE)
                 noise = np.random.randn(hihat_duration)
-                # High-pass filter (simple)
+
+                # High-pass filter (simple differentiation)
                 hihat = np.diff(noise, prepend=0)
-                envelope = np.exp(-50 * np.arange(hihat_duration) / self.SAMPLE_RATE)
-                hihat = 0.15 * hihat * envelope
+
+                # Sharp decay
+                envelope = np.exp(-60 * np.arange(hihat_duration) / self.SAMPLE_RATE)
+                hihat = 0.18 * hihat * envelope
 
                 end_sample = min(current_sample + hihat_duration, num_samples)
                 actual_duration = end_sample - current_sample
@@ -236,13 +654,32 @@ class ProceduralMusicEngine:
 
         return track
 
-    def _generate_bass(self, num_samples: int, tempo_bpm: float, scale: List[float], intensity: float) -> np.ndarray:
-        """Generate bassline track."""
+    # ========== PREMIUM BASS SYNTHESIS ==========
+
+    def _generate_premium_bass(
+        self, num_samples: int, tempo_bpm: float,
+        scale: List[float], bass_style: str, intensity: float
+    ) -> np.ndarray:
+        """Generate premium bass based on style."""
+        if bass_style == "analog_moog":
+            return self._moog_bass(num_samples, tempo_bpm, scale, intensity)
+        elif bass_style == "sequenced":
+            return self._sequenced_bass(num_samples, tempo_bpm, scale, intensity)
+        elif bass_style == "driving":
+            return self._driving_bass(num_samples, tempo_bpm, scale, intensity)
+        else:  # synth_bass, melodic, powerful
+            return self._synth_bass(num_samples, tempo_bpm, scale, intensity)
+
+    def _moog_bass(
+        self, num_samples: int, tempo_bpm: float,
+        scale: List[float], intensity: float
+    ) -> np.ndarray:
+        """Moog-style analog bass with filter sweep."""
         track = np.zeros(num_samples)
         samples_per_bar = int(4 * 60 * self.SAMPLE_RATE / tempo_bpm)
 
-        # Simple progression: I - VI - VII - V (in terms of scale degrees)
-        progression = [scale[0], scale[4], scale[5], scale[3]]
+        # Dark minor progression
+        progression = [scale[0], scale[2], scale[1], scale[0]]
 
         bar_index = 0
         current_sample = 0
@@ -252,10 +689,127 @@ class ProceduralMusicEngine:
             bar_duration = min(samples_per_bar, num_samples - current_sample)
             t = np.arange(bar_duration) / self.SAMPLE_RATE
 
-            # Bass note with slight envelope
-            bass_note = intensity * np.sin(2 * np.pi * freq * t)
-            # Add subtle envelope
-            envelope = 1 - 0.3 * t / (bar_duration / self.SAMPLE_RATE)
+            # Sawtooth wave (rich harmonics)
+            sawtooth = 2 * (t * freq % 1) - 1
+
+            # ADSR envelope
+            attack = int(0.01 * self.SAMPLE_RATE)
+            decay = int(0.1 * self.SAMPLE_RATE)
+            sustain_level = 0.7
+            release = int(0.2 * self.SAMPLE_RATE)
+
+            envelope = np.ones(bar_duration)
+            if len(envelope) > attack:
+                envelope[:attack] = np.linspace(0, 1, attack)
+            if len(envelope) > attack + decay:
+                envelope[attack:attack + decay] = np.linspace(1, sustain_level, decay)
+                envelope[attack + decay:-release] = sustain_level
+                envelope[-release:] = np.linspace(sustain_level, 0, release)
+
+            bass_note = intensity * sawtooth * envelope
+
+            track[current_sample:current_sample + bar_duration] = bass_note
+
+            current_sample += samples_per_bar
+            bar_index += 1
+
+        return track
+
+    def _sequenced_bass(
+        self, num_samples: int, tempo_bpm: float,
+        scale: List[float], intensity: float
+    ) -> np.ndarray:
+        """Sequenced bass (16th note pattern)."""
+        track = np.zeros(num_samples)
+        samples_per_16th = int(15 * self.SAMPLE_RATE / tempo_bpm)
+
+        # Bassline pattern (16ths)
+        note_pattern = [0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0]
+
+        step_index = 0
+        current_sample = 0
+
+        while current_sample < num_samples:
+            note_idx = note_pattern[step_index % len(note_pattern)]
+            if note_idx > 0:
+                freq = scale[note_idx % len(scale)]
+                note_duration = min(samples_per_16th, num_samples - current_sample)
+                t = np.arange(note_duration) / self.SAMPLE_RATE
+
+                # Square wave
+                square = np.sign(np.sin(2 * np.pi * freq * t))
+
+                # Short envelope
+                envelope = np.exp(-15 * t)
+
+                bass_note = intensity * 0.5 * square * envelope
+
+                end_sample = min(current_sample + note_duration, num_samples)
+                track[current_sample:end_sample] += bass_note[:end_sample - current_sample]
+
+            current_sample += samples_per_16th
+            step_index += 1
+
+        return track
+
+    def _driving_bass(
+        self, num_samples: int, tempo_bpm: float,
+        scale: List[float], intensity: float
+    ) -> np.ndarray:
+        """Driving bass (8th notes)."""
+        track = np.zeros(num_samples)
+        samples_per_8th = int(30 * self.SAMPLE_RATE / tempo_bpm)
+
+        # Driving pattern
+        note_pattern = [0, 0, 0, 2, 0, 0, 2, 0]
+
+        step_index = 0
+        current_sample = 0
+
+        while current_sample < num_samples:
+            note_idx = note_pattern[step_index % len(note_pattern)]
+            freq = scale[note_idx % len(scale)]
+            note_duration = min(samples_per_8th, num_samples - current_sample)
+            t = np.arange(note_duration) / self.SAMPLE_RATE
+
+            # Sine wave
+            sine = np.sin(2 * np.pi * freq * t)
+
+            # Envelope
+            envelope = np.exp(-8 * t)
+
+            bass_note = intensity * sine * envelope
+
+            track[current_sample:current_sample + note_duration] = bass_note
+
+            current_sample += samples_per_8th
+            step_index += 1
+
+        return track
+
+    def _synth_bass(
+        self, num_samples: int, tempo_bpm: float,
+        scale: List[float], intensity: float
+    ) -> np.ndarray:
+        """Standard synth bass."""
+        track = np.zeros(num_samples)
+        samples_per_bar = int(4 * 60 * self.SAMPLE_RATE / tempo_bpm)
+
+        progression = [scale[0], scale[4], scale[2], scale[3]]
+
+        bar_index = 0
+        current_sample = 0
+
+        while current_sample < num_samples:
+            freq = progression[bar_index % len(progression)]
+            bar_duration = min(samples_per_bar, num_samples - current_sample)
+            t = np.arange(bar_duration) / self.SAMPLE_RATE
+
+            # Sine wave with slight harmonic
+            bass_note = intensity * (np.sin(2 * np.pi * freq * t) + 0.3 * np.sin(4 * np.pi * freq * t))
+
+            # Envelope
+            envelope = 1 - 0.4 * t / (bar_duration / self.SAMPLE_RATE)
             envelope = np.clip(envelope, 0, 1)
 
             track[current_sample:current_sample + bar_duration] = bass_note * envelope
@@ -265,15 +819,20 @@ class ProceduralMusicEngine:
 
         return track
 
-    def _generate_pad(self, num_samples: int, tempo_bpm: float, scale: List[float]) -> np.ndarray:
-        """Generate sustained pad/chord track."""
+    # ========== PREMIUM SYNTH SYNTHESIS ==========
+
+    def _generate_premium_synth(
+        self, num_samples: int, tempo_bpm: float,
+        scale: List[float], synth_type: str
+    ) -> np.ndarray:
+        """Generate premium synth pads/chords based on type."""
         track = np.zeros(num_samples)
         samples_per_2bars = int(8 * 60 * self.SAMPLE_RATE / tempo_bpm)
 
-        # Simple chord progression using scale notes
+        # Chord progressions
         chords = [
-            [scale[0], scale[2], scale[4]],  # Root triad
-            [scale[3], scale[5], scale[1]],  # Different voicing
+            [scale[0], scale[2], scale[4]],  # i
+            [scale[3], scale[5], scale[1]],  # VI
         ]
 
         chord_index = 0
@@ -284,15 +843,29 @@ class ProceduralMusicEngine:
             chord_duration = min(samples_per_2bars, num_samples - current_sample)
             t = np.arange(chord_duration) / self.SAMPLE_RATE
 
-            # Generate chord by summing frequencies
             chord_sound = np.zeros(chord_duration)
-            for freq in chord:
-                chord_sound += 0.05 * np.sin(2 * np.pi * freq * t)
 
-            # Add vibrato for interest
-            vibrato = 0.002 * np.sin(2 * np.pi * 5 * t)  # 5 Hz vibrato
-            for i, freq in enumerate(chord):
-                chord_sound += 0.05 * np.sin(2 * np.pi * freq * t * (1 + vibrato))
+            # Different synth types
+            if "analog" in synth_type:
+                # Warm analog sound (sawtooth)
+                for freq in chord:
+                    sawtooth = 2 * (t * freq % 1) - 1
+                    chord_sound += 0.06 * sawtooth
+            elif "digital" in synth_type:
+                # Bright digital sound (triangle + sine)
+                for freq in chord:
+                    triangle = 2 * np.abs(2 * (t * freq % 1) - 1) - 1
+                    sine = np.sin(2 * np.pi * freq * t)
+                    chord_sound += 0.05 * (triangle + sine)
+            else:
+                # Default (sine waves)
+                for freq in chord:
+                    chord_sound += 0.07 * np.sin(2 * np.pi * freq * t)
+
+            # Add subtle vibrato
+            vibrato = 0.003 * np.sin(2 * np.pi * 4.5 * t)
+            for freq in chord:
+                chord_sound += 0.02 * np.sin(2 * np.pi * freq * t * (1 + vibrato))
 
             track[current_sample:current_sample + chord_duration] = chord_sound
 
@@ -301,92 +874,169 @@ class ProceduralMusicEngine:
 
         return track
 
+    def _generate_arpeggiator(
+        self, num_samples: int, tempo_bpm: float, scale: List[float]
+    ) -> np.ndarray:
+        """Generate arpeggiated sequence."""
+        track = np.zeros(num_samples)
+        samples_per_16th = int(15 * self.SAMPLE_RATE / tempo_bpm)
 
-class FakeMusicGenerator:
+        # Arpeggio pattern (up and down)
+        arp_pattern = [0, 2, 4, 2, 0, 2, 4, 5]
+
+        step_index = 0
+        current_sample = 0
+
+        while current_sample < num_samples:
+            note_idx = arp_pattern[step_index % len(arp_pattern)]
+            freq = scale[note_idx % len(scale)]
+            note_duration = min(samples_per_16th, num_samples - current_sample)
+            t = np.arange(note_duration) / self.SAMPLE_RATE
+
+            # Square wave for classic arpeggiator sound
+            square = np.sign(np.sin(2 * np.pi * freq * t))
+
+            # Plucky envelope
+            envelope = np.exp(-20 * t)
+
+            arp_note = 0.08 * square * envelope
+
+            track[current_sample:current_sample + note_duration] = arp_note
+
+            current_sample += samples_per_16th
+            step_index += 1
+
+        return track
+
+    # ========== PREMIUM EFFECTS ==========
+
+    def _apply_sidechain(
+        self, mix: np.ndarray, kick: np.ndarray, strength: float = 0.4
+    ) -> np.ndarray:
+        """Apply sidechain compression (ducking)."""
+        # Create ducking envelope from kick
+        kick_envelope = np.abs(kick)
+        # Smooth it
+        window = int(0.05 * self.SAMPLE_RATE)
+        if window > 0:
+            kick_envelope = np.convolve(kick_envelope, np.ones(window) / window, mode='same')
+
+        # Create sidechain multiplier
+        sidechain = 1 - strength * (kick_envelope / (np.max(kick_envelope) + 1e-6))
+        sidechain = np.clip(sidechain, 0.3, 1.0)
+
+        return mix * sidechain
+
+    def _apply_gated_reverb(self, snare: np.ndarray, gate_time: float = 0.15) -> np.ndarray:
+        """Apply gated reverb effect (classic 80s snare sound)."""
+        # Simple reverb simulation
+        gate_samples = int(gate_time * self.SAMPLE_RATE)
+
+        # Find snare hits and add reverb tail
+        processed = snare.copy()
+        threshold = np.max(np.abs(snare)) * 0.1
+
+        for i in range(len(snare) - gate_samples):
+            if np.abs(snare[i]) > threshold:
+                # Add gated reverb tail
+                tail = np.exp(-10 * np.arange(gate_samples) / self.SAMPLE_RATE)
+                tail *= snare[i] * 0.3
+                processed[i:i + gate_samples] += tail
+
+        return processed
+
+
+class PremiumMusicGenerator:
     """
-    Deterministic fake music generator that creates realistic song blueprints.
+    Premium artist-influenced music generator.
 
-    This generates structured songs with lyrics, sections, and metadata
-    without making any external API calls.
+    Creates structured songs with lyrics, sections, and metadata
+    based on artist influences and musical characteristics.
     """
 
-    # Genre-specific templates
-    GENRE_TEMPLATES = {
-        "trap": {
-            "vocal": {"gender": "male", "tone": "aggressive", "energy": "high"},
-            "default_bpm": 140,
-            "themes": ["money", "hustle", "success", "street life", "ambition"],
-        },
-        "drill": {
-            "vocal": {"gender": "male", "tone": "menacing", "energy": "high"},
-            "default_bpm": 145,
-            "themes": ["struggle", "survival", "street", "loyalty", "pressure"],
-        },
-        "afrobeat": {
-            "vocal": {"gender": "mixed", "tone": "vibrant", "energy": "high"},
-            "default_bpm": 102,
-            "themes": ["love", "celebration", "dance", "joy", "culture"],
-        },
-        "lofi": {
-            "vocal": {"gender": "female", "tone": "soft", "energy": "low"},
-            "default_bpm": 85,
-            "themes": ["reflection", "nostalgia", "peace", "night", "study"],
-        },
-        "pop": {
-            "vocal": {"gender": "female", "tone": "bright", "energy": "medium"},
-            "default_bpm": 120,
-            "themes": ["love", "heartbreak", "fun", "summer", "dreams"],
-        },
-        "edm": {
-            "vocal": {"gender": "female", "tone": "powerful", "energy": "high"},
-            "default_bpm": 128,
-            "themes": ["party", "freedom", "energy", "night", "escape"],
-        },
-        "rnb": {
-            "vocal": {"gender": "female", "tone": "smooth", "energy": "medium"},
-            "default_bpm": 90,
-            "themes": ["love", "emotion", "intimacy", "passion", "soul"],
-        },
-        "hiphop": {
-            "vocal": {"gender": "male", "tone": "confident", "energy": "medium"},
-            "default_bpm": 95,
-            "themes": ["story", "struggle", "growth", "realness", "legacy"],
-        },
+    # Artist-specific vocal characteristics
+    ARTIST_VOCAL_STYLES = {
+        "depeche_mode": {"gender": "male", "tone": "baritone", "energy": "medium"},
+        "gary_numan": {"gender": "male", "tone": "detached", "energy": "medium"},
+        "kraftwerk": {"gender": "male", "tone": "robotic", "energy": "low"},
+        "new_order": {"gender": "male", "tone": "melancholic", "energy": "medium"},
+        "pet_shop_boys": {"gender": "male", "tone": "smooth", "energy": "medium"},
+        "human_league": {"gender": "mixed", "tone": "romantic", "energy": "medium"},
+        "omd": {"gender": "male", "tone": "atmospheric", "energy": "medium"},
+        "tears_for_fears": {"gender": "male", "tone": "emotive", "energy": "high"},
+        "eurythmics": {"gender": "female", "tone": "powerful", "energy": "high"},
+        "yazoo": {"gender": "female", "tone": "soulful", "energy": "high"},
     }
 
     # Mood modifiers
     MOOD_MODIFIERS = {
         "dark": {"tone_mod": "dark", "themes": ["shadows", "mystery", "depth", "intensity"]},
-        "energetic": {"tone_mod": "energetic", "themes": ["power", "drive", "motion", "alive"]},
-        "emotional": {"tone_mod": "emotional", "themes": ["feelings", "heart", "soul", "vulnerable"]},
-        "dreamy": {"tone_mod": "dreamy", "themes": ["clouds", "floating", "ethereal", "imagination"]},
+        "dystopian": {"tone_mod": "dystopian", "themes": ["machines", "future", "cold", "metallic"]},
+        "melancholic": {"tone_mod": "melancholic", "themes": ["loss", "memory", "longing", "reflection"]},
+        "romantic": {"tone_mod": "romantic", "themes": ["love", "passion", "desire", "connection"]},
+        "atmospheric": {"tone_mod": "atmospheric", "themes": ["space", "dreams", "floating", "ethereal"]},
         "uplifting": {"tone_mod": "uplifting", "themes": ["hope", "rise", "light", "positive"]},
-        "chill": {"tone_mod": "relaxed", "themes": ["calm", "smooth", "easy", "vibe"]},
+        "sophisticated": {"tone_mod": "sophisticated", "themes": ["elegance", "style", "urbane", "polished"]},
+        "emotive": {"tone_mod": "emotive", "themes": ["feelings", "heart", "soul", "vulnerable"]},
+        "powerful": {"tone_mod": "powerful", "themes": ["strength", "force", "bold", "commanding"]},
+        "mechanical": {"tone_mod": "mechanical", "themes": ["precision", "rhythm", "systematic", "industrial"]},
     }
 
     def generate_song(self, request: MusicGenerateRequest) -> MusicGenerateResponse:
-        """Generate a complete song blueprint from request."""
+        """Generate a complete song blueprint from artist influences."""
 
-        # Get genre template
-        genre_lower = request.genre.lower()
-        template = self.GENRE_TEMPLATES.get(genre_lower, self.GENRE_TEMPLATES["pop"])
+        # Normalize artist names to keys
+        artist_keys = []
+        for artist in request.artist_influences:
+            key = artist.lower().replace(" ", "_").replace("the_", "")
+            if key in PremiumMusicEngine.ARTIST_DATABASE:
+                artist_keys.append(key)
+
+        # Fallback to default if no valid artists
+        if not artist_keys:
+            artist_keys = ["depeche_mode"]
+
+        # Get primary artist
+        primary_key = artist_keys[0]
+        primary_artist = PremiumMusicEngine.ARTIST_DATABASE[primary_key]
+
+        # Determine mood (from request or artist default)
+        mood = request.mood or primary_artist["mood"]
 
         # Get mood modifier
-        mood_lower = request.mood.lower()
-        mood_mod = self.MOOD_MODIFIERS.get(mood_lower, self.MOOD_MODIFIERS["energetic"])
+        mood_mod = self.MOOD_MODIFIERS.get(mood, self.MOOD_MODIFIERS["dark"])
 
         # Generate track ID (deterministic from inputs)
-        track_input = f"{request.genre}{request.mood}{request.reference_text or ''}"
+        track_input = f"{'_'.join(request.artist_influences)}{mood}{request.reference_text or ''}"
         track_id = hashlib.md5(track_input.encode()).hexdigest()[:12]
 
         # Generate title
-        title = self._generate_title(request.genre, request.mood, request.reference_text)
+        title = self._generate_title(request.artist_influences, mood, request.reference_text)
 
-        # Determine tempo
-        tempo_bpm = request.tempo_bpm or template["default_bpm"]
+        # Determine tempo (from request or artist average)
+        if request.tempo_bpm:
+            tempo_bpm = request.tempo_bpm
+        else:
+            tempo_ranges = [PremiumMusicEngine.ARTIST_DATABASE[k]["tempo_range"] for k in artist_keys]
+            avg_min = int(np.mean([r[0] for r in tempo_ranges]))
+            avg_max = int(np.mean([r[1] for r in tempo_ranges]))
+            tempo_bpm = (avg_min + avg_max) // 2
+
+        # Determine instruments
+        if request.instruments:
+            instruments = request.instruments
+        else:
+            # Merge instruments from all artists
+            merged = set()
+            for key in artist_keys:
+                merged.update(PremiumMusicEngine.ARTIST_DATABASE[key]["instruments"])
+            instruments = list(merged)
+
+        # Determine production era
+        production_era = request.production_era or primary_artist["production_era"]
 
         # Create vocal style
-        vocal_base = template["vocal"].copy()
+        vocal_base = self.ARTIST_VOCAL_STYLES.get(primary_key, {"gender": "male", "tone": "synthetic", "energy": "medium"})
         vocal_style = VocalStyle(
             gender=vocal_base["gender"],
             tone=f"{mood_mod['tone_mod']} {vocal_base['tone']}",
@@ -394,15 +1044,15 @@ class FakeMusicGenerator:
         )
 
         # Generate hook and chorus
-        hook = self._generate_hook(request.genre, request.mood, request.reference_text)
-        chorus = self._generate_chorus(request.genre, request.mood, request.reference_text, hook)
+        hook = self._generate_hook(request.artist_influences, mood, request.reference_text)
+        chorus = self._generate_chorus(request.artist_influences, mood, request.reference_text, hook)
 
         # Generate sections
         section_names = request.sections or ["Intro", "Verse 1", "Chorus", "Verse 2", "Bridge", "Chorus", "Outro"]
         sections = self._generate_sections(
             section_names,
-            request.genre,
-            request.mood,
+            request.artist_influences,
+            mood,
             request.reference_text,
             chorus
         )
@@ -413,8 +1063,10 @@ class FakeMusicGenerator:
         return MusicGenerateResponse(
             track_id=track_id,
             title=title,
-            genre=request.genre,
-            mood=request.mood,
+            artist_influences=request.artist_influences,
+            instruments=instruments,
+            production_era=production_era,
+            mood=mood,
             tempo_bpm=tempo_bpm,
             vocal_style=vocal_style,
             hook=hook,
@@ -424,54 +1076,51 @@ class FakeMusicGenerator:
             saved_media_id=None
         )
 
-    def _generate_title(self, genre: str, mood: str, reference_text: Optional[str]) -> str:
-        """Generate a song title."""
+    def _generate_title(self, artists: List[str], mood: str, reference_text: Optional[str]) -> str:
+        """Generate a song title based on artists and mood."""
         if reference_text and len(reference_text) > 10:
             # Extract keywords from reference
             words = reference_text.split()[:4]
             return " ".join(w.capitalize() for w in words if len(w) > 3)[:40]
 
-        # Generate from genre + mood
-        genre_words = {
-            "trap": ["Money", "Dreams", "Hustle", "Rise"],
-            "drill": ["Pressure", "Streets", "Real", "Survival"],
-            "afrobeat": ["Celebration", "Dance", "Joy", "Vibes"],
-            "lofi": ["Midnight", "Thoughts", "Coffee", "Rain"],
-            "pop": ["Summer", "Dreams", "Heartbeat", "Starlight"],
-            "edm": ["Pulse", "Neon", "Eclipse", "Frequency"],
-            "rnb": ["Velvet", "Soul", "Emotion", "Intimate"],
-            "hiphop": ["Legacy", "Story", "Journey", "Truth"],
-        }
-
+        # Mood-based title words
         mood_words = {
-            "dark": ["Shadows", "Depths", "Mystery"],
-            "energetic": ["Energy", "Power", "Drive"],
-            "emotional": ["Feelings", "Heart", "Soul"],
-            "dreamy": ["Clouds", "Dreams", "Floating"],
-            "uplifting": ["Rising", "Light", "Hope"],
-            "chill": ["Vibes", "Smooth", "Easy"],
+            "dark": ["Shadows", "Depths", "Mystery", "Eclipse"],
+            "dystopian": ["Machines", "Future", "Metal", "Binary"],
+            "melancholic": ["Memory", "Fading", "Distance", "Echoes"],
+            "romantic": ["Hearts", "Touch", "Desire", "Connection"],
+            "atmospheric": ["Space", "Clouds", "Dreams", "Ethereal"],
+            "uplifting": ["Rising", "Light", "Hope", "Ascend"],
+            "sophisticated": ["Velvet", "Elegance", "Urbane", "Style"],
+            "emotive": ["Feelings", "Soul", "Tears", "Passion"],
+            "powerful": ["Force", "Thunder", "Steel", "Impact"],
+            "mechanical": ["Precision", "Systems", "Rhythm", "Logic"],
         }
 
-        genre_word = genre_words.get(genre.lower(), ["Song"])[0]
-        mood_word = mood_words.get(mood.lower(), ["Vibes"])[0]
+        # Get mood word
+        mood_word = mood_words.get(mood, ["Synth", "Electric", "Digital", "Wave"])[0]
 
-        return f"{mood_word} {genre_word}"
+        # Genre word based on synthwave/electronic
+        synth_words = ["Frequency", "Pulse", "Circuit", "Voltage", "Signal"]
+        synth_word = synth_words[hash(artists[0]) % len(synth_words)]
 
-    def _generate_hook(self, genre: str, mood: str, reference_text: Optional[str]) -> str:
+        return f"{mood_word} {synth_word}"
+
+    def _generate_hook(self, artists: List[str], mood: str, reference_text: Optional[str]) -> str:
         """Generate a memorable hook line."""
         templates = [
-            f"Can't stop this {mood} feeling",
-            f"Living in the {mood} moments",
-            f"This is how we {mood.replace('emotional', 'feel')}",
-            f"Running through the {mood} nights",
-            f"We're rising from the {mood} depths",
+            f"Lost in the {mood} frequency",
+            f"Running through these {mood} nights",
+            f"Feel the {mood} pulse",
+            f"We're {mood} and electric",
+            f"Dancing in the {mood} light",
         ]
 
         # Use hash to deterministically pick a template
-        idx = hash(f"{genre}{mood}") % len(templates)
+        idx = hash(f"{'_'.join(artists)}{mood}") % len(templates)
         return templates[idx]
 
-    def _generate_chorus(self, genre: str, mood: str, reference_text: Optional[str], hook: str) -> str:
+    def _generate_chorus(self, artists: List[str], mood: str, reference_text: Optional[str], hook: str) -> str:
         """Generate main chorus lyrics."""
         return f"""{hook}
 Never looking back, we're moving forward now
@@ -482,7 +1131,7 @@ This is our time, this is our sound"""
     def _generate_sections(
         self,
         section_names: List[str],
-        genre: str,
+        artists: List[str],
         mood: str,
         reference_text: Optional[str],
         chorus: str
@@ -497,8 +1146,8 @@ This is our time, this is our sound"""
                 sections.append(MusicSection(
                     name=section_name,
                     bars=8,
-                    description="Atmospheric intro with melodic elements",
-                    lyrics="[Instrumental with ambient sounds]"
+                    description="Atmospheric synth intro with sequenced elements",
+                    lyrics="[Instrumental with ambient synths]"
                 ))
 
             elif "verse" in section_lower:
@@ -506,15 +1155,15 @@ This is our time, this is our sound"""
                 sections.append(MusicSection(
                     name=section_name,
                     bars=16,
-                    description=f"Story development, building energy",
-                    lyrics=self._generate_verse_lyrics(genre, mood, verse_num)
+                    description=f"Verse development with electronic textures",
+                    lyrics=self._generate_verse_lyrics(artists, mood, verse_num)
                 ))
 
             elif "chorus" in section_lower:
                 sections.append(MusicSection(
                     name=section_name,
                     bars=16,
-                    description="Main hook section, maximum energy",
+                    description="Main hook section with full synth arrangement",
                     lyrics=chorus
                 ))
 
@@ -522,16 +1171,16 @@ This is our time, this is our sound"""
                 sections.append(MusicSection(
                     name=section_name,
                     bars=8,
-                    description="Musical break, change in dynamics",
-                    lyrics=self._generate_bridge_lyrics(genre, mood)
+                    description="Synth break with arpeggiated sequences",
+                    lyrics=self._generate_bridge_lyrics(artists, mood)
                 ))
 
             elif "outro" in section_lower:
                 sections.append(MusicSection(
                     name=section_name,
                     bars=8,
-                    description="Gradual fade with repeated hook elements",
-                    lyrics="[Instrumental fade with vocal echoes]"
+                    description="Gradual fade with sequenced elements",
+                    lyrics="[Instrumental fade with synth echoes]"
                 ))
 
             else:
@@ -540,62 +1189,66 @@ This is our time, this is our sound"""
                     name=section_name,
                     bars=12,
                     description="Musical section",
-                    lyrics=self._generate_verse_lyrics(genre, mood, "1")
+                    lyrics=self._generate_verse_lyrics(artists, mood, "1")
                 ))
 
         return sections
 
-    def _generate_verse_lyrics(self, genre: str, mood: str, verse_num: str) -> str:
+    def _generate_verse_lyrics(self, artists: List[str], mood: str, verse_num: str) -> str:
         """Generate verse lyrics."""
         verse_templates = {
-            "1": """Started from the bottom, now we're on the rise
-Every single struggle turned to fire in our eyes
-No more looking backwards, only forward from here
-Living in the moment, letting go of the fear""",
-            "2": """They said we couldn't make it, said we'd never survive
-But we proved them all wrong, now we're feeling alive
-Every obstacle we faced just made us more strong
-This is our story, this is our song"""
+            "1": """In the neon glow we find our way
+Through the static haze of yesterday
+Synthesized emotions running through my veins
+Living in this digital domain""",
+            "2": """They said our world was cold and gray
+But we found color in the display
+Every circuit sparks with something new
+This electric dream, me and you"""
         }
 
         return verse_templates.get(verse_num, verse_templates["1"])
 
-    def _generate_bridge_lyrics(self, genre: str, mood: str) -> str:
+    def _generate_bridge_lyrics(self, artists: List[str], mood: str) -> str:
         """Generate bridge lyrics."""
-        return """And when the lights go down
-We'll still be standing proud
-Nothing can stop us now
-We're breaking through the clouds"""
+        return """And when the frequencies align
+We'll transcend the space and time
+Nothing can stop this signal now
+We're breaking through somehow"""
 
     def _generate_audio(self, request: MusicGenerateRequest) -> str:
         """
-        Generate a procedural backing track using the ProceduralMusicEngine.
+        Generate premium backing track using PremiumMusicEngine.
 
         Args:
-            request: Full music generation request with genre, mood, tempo
+            request: Full music generation request with artist_influences
 
         Returns:
             URL path to the generated audio file
         """
-        engine = ProceduralMusicEngine()
+        engine = PremiumMusicEngine()
         return engine.generate_backing_track(request)
 
 
 class MusicService:
-    """Service for music generation operations."""
+    """Service for premium artist-influenced music generation."""
 
     def __init__(self, db: Optional[Session] = None):
         """Initialize music service."""
         self.db = db
-        self.generator = FakeMusicGenerator()
+        self.generator = PremiumMusicGenerator()
 
     def generate_song(self, request: MusicGenerateRequest) -> MusicGenerateResponse:
         """
-        Generate a complete song blueprint.
+        Generate a complete premium song blueprint.
 
-        Creates structured output with lyrics, sections, and metadata.
+        Creates structured output with lyrics, sections, and metadata
+        based on artist influences.
         """
-        logger.info(f"Generating song: genre={request.genre}, mood={request.mood}")
+        logger.info(
+            f"Generating premium song: artists={', '.join(request.artist_influences)}, "
+            f"mood={request.mood or 'auto'}"
+        )
 
         # Generate the song
         response = self.generator.generate_song(request)
@@ -608,15 +1261,20 @@ class MusicService:
                 metadata={
                     "track_id": response.track_id,
                     "title": response.title,
-                    "genre": response.genre,
+                    "artist_influences": response.artist_influences,
+                    "instruments": response.instruments,
+                    "production_era": response.production_era,
                     "mood": response.mood,
                     "tempo_bpm": response.tempo_bpm,
-                    "operation": "song_generation",
+                    "operation": "premium_song_generation",
                 }
             )
             response.saved_media_id = saved_media_id
 
-        logger.info(f"Generated song: {response.title} ({response.track_id})")
+        logger.info(
+            f"Generated premium song: {response.title} ({response.track_id}) - "
+            f"{', '.join(response.artist_influences)}"
+        )
         return response
 
     def _save_media_file(

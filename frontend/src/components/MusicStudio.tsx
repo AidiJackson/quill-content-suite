@@ -12,8 +12,8 @@ import apiClient from '@/lib/apiClient';
 import type { GenerateTrackRequest, GenerateTrackResponse, GenerateVocalsResponse } from '@/lib/types';
 
 export function MusicStudio() {
-  const [genre, setGenre] = useState('trap');
-  const [mood, setMood] = useState('energetic');
+  const [selectedArtists, setSelectedArtists] = useState<string[]>(['Depeche Mode']);
+  const [mood, setMood] = useState('');
   const [tempoBpm, setTempoBpm] = useState<string>('');
   const [referenceText, setReferenceText] = useState('');
   const [generating, setGenerating] = useState(false);
@@ -21,9 +21,31 @@ export function MusicStudio() {
   const [vocalDemo, setVocalDemo] = useState<GenerateVocalsResponse | null>(null);
   const [generatingVocals, setGeneratingVocals] = useState(false);
 
+  // Available artists (from backend database)
+  const availableArtists = [
+    'Depeche Mode',
+    'Gary Numan',
+    'Kraftwerk',
+    'New Order',
+    'Pet Shop Boys',
+    'The Human League',
+    'Orchestral Manoeuvres in the Dark',
+    'Tears for Fears',
+    'Eurythmics',
+    'Yazoo',
+  ];
+
+  const toggleArtist = (artist: string) => {
+    setSelectedArtists((prev) =>
+      prev.includes(artist)
+        ? prev.filter((a) => a !== artist)
+        : [...prev, artist]
+    );
+  };
+
   const handleGenerate = async () => {
-    if (!genre || !mood) {
-      toast.error('Please select genre and mood');
+    if (selectedArtists.length === 0) {
+      toast.error('Please select at least one artist influence');
       return;
     }
 
@@ -31,8 +53,8 @@ export function MusicStudio() {
       setGenerating(true);
 
       const request: GenerateTrackRequest = {
-        genre,
-        mood,
+        artist_influences: selectedArtists,
+        mood: mood || undefined,
         tempo_bpm: tempoBpm ? parseInt(tempoBpm) : undefined,
         reference_text: referenceText || undefined,
       };
@@ -41,12 +63,12 @@ export function MusicStudio() {
       setSong(result);
       setVocalDemo(null); // Clear previous vocal demo
 
-      toast.success('Song generated!', {
+      toast.success('Premium track generated!', {
         description: `"${result.title}" is ready`,
       });
     } catch (error: any) {
-      console.error('Failed to generate song:', error);
-      toast.error('Failed to generate song', {
+      console.error('Failed to generate track:', error);
+      toast.error('Failed to generate track', {
         description: error.detail || error.message || 'Please try again',
       });
     } finally {
@@ -119,37 +141,51 @@ export function MusicStudio() {
 
             <div className="space-y-4">
               <div>
-                <Label htmlFor="genre" className="text-sm text-slate-700">Genre *</Label>
-                <Select value={genre} onValueChange={setGenre}>
-                  <SelectTrigger id="genre" className="mt-1.5">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="trap">Trap</SelectItem>
-                    <SelectItem value="drill">Drill</SelectItem>
-                    <SelectItem value="afrobeat">Afrobeat</SelectItem>
-                    <SelectItem value="lofi">Lo-fi</SelectItem>
-                    <SelectItem value="pop">Pop</SelectItem>
-                    <SelectItem value="edm">EDM</SelectItem>
-                    <SelectItem value="rnb">R&B</SelectItem>
-                    <SelectItem value="hiphop">Hip Hop</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label className="text-sm text-slate-700">
+                  Artist Influences * <span className="text-slate-500">(Select 1-3)</span>
+                </Label>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {availableArtists.map((artist) => (
+                    <Badge
+                      key={artist}
+                      variant={selectedArtists.includes(artist) ? 'default' : 'outline'}
+                      className={`cursor-pointer transition-all ${
+                        selectedArtists.includes(artist)
+                          ? 'bg-purple-600 hover:bg-purple-700'
+                          : 'hover:bg-slate-100'
+                      }`}
+                      onClick={() => toggleArtist(artist)}
+                    >
+                      {artist}
+                    </Badge>
+                  ))}
+                </div>
+                {selectedArtists.length > 0 && (
+                  <p className="text-xs text-slate-500 mt-2">
+                    Selected: {selectedArtists.join(', ')}
+                  </p>
+                )}
               </div>
 
               <div>
-                <Label htmlFor="mood" className="text-sm text-slate-700">Mood *</Label>
+                <Label htmlFor="mood" className="text-sm text-slate-700">
+                  Mood <span className="text-slate-500">- Optional (auto-detected from artists)</span>
+                </Label>
                 <Select value={mood} onValueChange={setMood}>
                   <SelectTrigger id="mood" className="mt-1.5">
-                    <SelectValue />
+                    <SelectValue placeholder="Auto-detect from artists" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="dark">Dark</SelectItem>
-                    <SelectItem value="energetic">Energetic</SelectItem>
-                    <SelectItem value="emotional">Emotional</SelectItem>
-                    <SelectItem value="dreamy">Dreamy</SelectItem>
+                    <SelectItem value="dystopian">Dystopian</SelectItem>
+                    <SelectItem value="melancholic">Melancholic</SelectItem>
+                    <SelectItem value="romantic">Romantic</SelectItem>
+                    <SelectItem value="atmospheric">Atmospheric</SelectItem>
                     <SelectItem value="uplifting">Uplifting</SelectItem>
-                    <SelectItem value="chill">Chill</SelectItem>
+                    <SelectItem value="sophisticated">Sophisticated</SelectItem>
+                    <SelectItem value="emotive">Emotive</SelectItem>
+                    <SelectItem value="powerful">Powerful</SelectItem>
+                    <SelectItem value="mechanical">Mechanical</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -205,29 +241,54 @@ export function MusicStudio() {
 
           {song && (
             <Card className="p-5 bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
-              <h5 className="text-slate-900 mb-2 font-medium">Song Info</h5>
+              <h5 className="text-slate-900 mb-2 font-medium">Premium Track Info</h5>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-slate-600">Track ID:</span>
                   <code className="text-xs bg-white px-2 py-1 rounded">{song.track_id}</code>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-600">Genre:</span>
-                  <Badge variant="secondary" className="capitalize">{song.genre}</Badge>
+                <div>
+                  <span className="text-slate-600 block mb-1">Artists:</span>
+                  <div className="flex flex-wrap gap-1">
+                    {song.artist_influences.map((artist) => (
+                      <Badge key={artist} variant="secondary" className="text-xs">
+                        {artist}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-slate-600">Mood:</span>
                   <Badge variant="secondary" className="capitalize">{song.mood}</Badge>
                 </div>
-                {song.tempo_bpm && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-600">Tempo:</span>
-                    <span className="font-medium">{song.tempo_bpm} BPM</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600">Era:</span>
+                  <Badge variant="secondary" className="capitalize text-xs">
+                    {song.production_era.replace(/_/g, ' ')}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600">Tempo:</span>
+                  <span className="font-medium">{song.tempo_bpm} BPM</span>
+                </div>
+                <div>
+                  <span className="text-slate-600 block mb-1">Instruments:</span>
+                  <div className="flex flex-wrap gap-1">
+                    {song.instruments.slice(0, 4).map((inst) => (
+                      <Badge key={inst} variant="outline" className="text-xs">
+                        {inst.replace(/_/g, ' ')}
+                      </Badge>
+                    ))}
+                    {song.instruments.length > 4 && (
+                      <Badge variant="outline" className="text-xs">
+                        +{song.instruments.length - 4} more
+                      </Badge>
+                    )}
                   </div>
-                )}
+                </div>
                 <div className="pt-2 border-t border-purple-200">
                   <p className="text-xs text-purple-900">
-                    Audio is placeholder for now – real audio engine coming soon.
+                    ✨ Premium quality with authentic 808/909 synthesis, ADSR envelopes, and artist-specific characteristics.
                   </p>
                 </div>
               </div>

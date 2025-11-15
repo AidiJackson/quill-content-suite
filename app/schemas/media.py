@@ -197,29 +197,46 @@ class MusicSection(BaseModel):
 
 
 class MusicGenerateRequest(BaseModel):
-    """Request schema for music generation."""
+    """Request schema for premium artist-influenced music generation."""
 
-    genre: str = Field(..., description="Music genre (e.g., trap, drill, afrobeat, lofi, pop, edm, rnb, hiphop)")
-    mood: str = Field(..., description="Mood (e.g., dark, energetic, emotional, dreamy, uplifting, chill)")
-    tempo_bpm: Optional[int] = Field(None, ge=60, le=200, description="Tempo in BPM")
+    artist_influences: List[str] = Field(
+        ...,
+        min_length=1,
+        description="Artist influences (e.g., ['Depeche Mode', 'Gary Numan'])"
+    )
+    instruments: Optional[List[str]] = Field(
+        None,
+        description="Specific instruments to use (e.g., ['analog_synth', '808', 'arpeggiator'])"
+    )
+    production_era: Optional[str] = Field(
+        None,
+        description="Production era (e.g., 'early_80s_analog', 'mid_80s_digital', 'late_80s', 'modern_retro')"
+    )
+    mood: Optional[str] = Field(
+        None,
+        description="Mood (e.g., dark, melancholic, uplifting, dystopian, romantic)"
+    )
+    tempo_bpm: Optional[int] = Field(None, ge=60, le=200, description="Tempo in BPM (auto-detected from artists if not provided)")
     reference_text: Optional[str] = Field(None, description="Reference text or song idea")
     sections: Optional[List[str]] = Field(None, description="Desired sections (e.g., intro, verse, chorus)")
     project_id: Optional[str] = None
 
 
 class MusicGenerateResponse(BaseModel):
-    """Response schema for music generation."""
+    """Response schema for premium artist-influenced music generation."""
 
     track_id: str = Field(..., description="Unique track identifier")
     title: str = Field(..., description="Generated song title")
-    genre: str
+    artist_influences: List[str] = Field(..., description="Artist influences used")
+    instruments: List[str] = Field(..., description="Instruments used in the track")
+    production_era: str = Field(..., description="Production era style")
     mood: str
-    tempo_bpm: Optional[int] = None
+    tempo_bpm: int
     vocal_style: VocalStyle
     hook: str = Field(..., description="Memorable hook line")
     chorus: str = Field(..., description="Main chorus lyrics")
     sections: List[MusicSection] = Field(..., description="Song structure with lyrics")
-    fake_audio_url: str = Field(..., description="Placeholder audio URL")
+    fake_audio_url: str = Field(..., description="Audio URL for backing track")
     saved_media_id: Optional[str] = None
 
 
