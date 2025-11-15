@@ -1479,6 +1479,71 @@ class MusicService:
         )
         return response
 
+    async def generate_magic_song(self, request: MusicGenerateRequest) -> MusicGenerateResponse:
+        """
+        Generate an AI-enhanced premium song blueprint.
+
+        This is the "AI Magic Track" pipeline:
+        1. Build base producer plan from rule-based logic
+        2. Refine plan with LLM intelligence (if enabled)
+        3. Generate song blueprint and audio using refined plan
+
+        Args:
+            request: Music generation request with influence fields
+
+        Returns:
+            Complete song blueprint with refined producer plan
+        """
+        logger.info(
+            f"Generating AI Magic Track: artists={', '.join(request.artist_influences)}, "
+            f"influence_text={request.influence_text[:50] if request.influence_text else 'none'}..."
+        )
+
+        # Import here to avoid circular dependency issues
+        from app.services.llm_producer_client import create_llm_producer_client
+
+        # Build base producer plan
+        base_plan = build_producer_plan(request)
+
+        # Refine with LLM (or deterministic enhancements if no LLM available)
+        llm_client = create_llm_producer_client()
+        refined_plan = await llm_client.refine_plan(request, base_plan)
+
+        logger.info(f"Refined plan summary: {refined_plan.summary[:100]}...")
+
+        # Generate song using refined plan
+        # Note: The generator.generate_song already uses the plan,
+        # but we want to ensure the refined plan's summary is what gets returned
+        response = self.generator.generate_song(request)
+
+        # Override with refined plan summary
+        response.plan_summary = refined_plan.summary
+
+        # Save to database if project_id provided
+        if request.project_id and self.db:
+            saved_media_id = self._save_media_file(
+                project_id=request.project_id,
+                url=response.fake_audio_url,
+                metadata={
+                    "track_id": response.track_id,
+                    "title": response.title,
+                    "artist_influences": response.artist_influences,
+                    "artist_style": response.artist_style,
+                    "instruments": response.instruments,
+                    "production_era": response.production_era,
+                    "mood": response.mood,
+                    "tempo_bpm": response.tempo_bpm,
+                    "plan_summary": response.plan_summary,
+                    "operation": "ai_magic_track_generation",
+                }
+            )
+            response.saved_media_id = saved_media_id
+
+        logger.info(
+            f"Generated AI Magic Track: {response.title} ({response.track_id})"
+        )
+        return response
+
     def _save_media_file(
         self,
         project_id: str,

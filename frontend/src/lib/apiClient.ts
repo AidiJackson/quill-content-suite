@@ -257,6 +257,9 @@ export const audio = {
 export const music = {
   generateTrack: (data: T.GenerateTrackRequest) =>
     post<T.GenerateTrackRequest, T.GenerateTrackResponse>('/music/generate', data),
+
+  magicTrack: (data: T.GenerateTrackRequest) =>
+    post<T.GenerateTrackRequest, T.GenerateTrackResponse>('/music/magic', data),
 };
 
 // ==================== Vocal Generation ====================

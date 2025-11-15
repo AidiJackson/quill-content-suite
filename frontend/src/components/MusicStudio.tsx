@@ -17,7 +17,6 @@ export function MusicStudio() {
   const [mood, setMood] = useState('');
   const [tempoBpm, setTempoBpm] = useState<string>('');
   const [referenceText, setReferenceText] = useState('');
-  const [generating, setGenerating] = useState(false);
   const [song, setSong] = useState<GenerateTrackResponse | null>(null);
   const [vocalDemo, setVocalDemo] = useState<GenerateVocalsResponse | null>(null);
   const [generatingVocals, setGeneratingVocals] = useState(false);
@@ -26,6 +25,10 @@ export function MusicStudio() {
   const [influenceText, setInfluenceText] = useState('');
   const [influenceArtists, setInfluenceArtists] = useState<string[]>([]);
   const [usageContext, setUsageContext] = useState<string>('tiktok');
+
+  // Generation state (two modes)
+  const [isGeneratingMagic, setIsGeneratingMagic] = useState(false);
+  const [isGeneratingBasic, setIsGeneratingBasic] = useState(false);
 
   // Available artists (from backend database)
   const availableArtists = [
@@ -60,40 +63,70 @@ export function MusicStudio() {
     );
   };
 
-  const handleGenerate = async () => {
+  const buildRequest = (): GenerateTrackRequest => {
+    return {
+      artist_influences: selectedArtists,
+      artist_style: artistStyle || undefined,
+      mood: mood || undefined,
+      tempo_bpm: tempoBpm ? parseInt(tempoBpm) : undefined,
+      reference_text: referenceText || undefined,
+      influence_text: influenceText || undefined,
+      influence_artists: influenceArtists.length > 0 ? influenceArtists : undefined,
+      usage_context: usageContext || undefined,
+    };
+  };
+
+  const handleMagicTrack = async () => {
     if (selectedArtists.length === 0) {
       toast.error('Please select at least one artist influence');
       return;
     }
 
     try {
-      setGenerating(true);
+      setIsGeneratingMagic(true);
 
-      const request: GenerateTrackRequest = {
-        artist_influences: selectedArtists,
-        artist_style: artistStyle || undefined,
-        mood: mood || undefined,
-        tempo_bpm: tempoBpm ? parseInt(tempoBpm) : undefined,
-        reference_text: referenceText || undefined,
-        influence_text: influenceText || undefined,
-        influence_artists: influenceArtists.length > 0 ? influenceArtists : undefined,
-        usage_context: usageContext || undefined,
-      };
+      const request = buildRequest();
+      const result = await apiClient.music.magicTrack(request);
+      setSong(result);
+      setVocalDemo(null); // Clear previous vocal demo
 
+      toast.success('✨ AI Magic Track created!', {
+        description: `"${result.title}" is ready`,
+      });
+    } catch (error: any) {
+      console.error('Failed to generate magic track:', error);
+      toast.error('Failed to generate magic track', {
+        description: error.detail || error.message || 'Please try again',
+      });
+    } finally {
+      setIsGeneratingMagic(false);
+    }
+  };
+
+  const handleBasicTrack = async () => {
+    if (selectedArtists.length === 0) {
+      toast.error('Please select at least one artist influence');
+      return;
+    }
+
+    try {
+      setIsGeneratingBasic(true);
+
+      const request = buildRequest();
       const result = await apiClient.music.generateTrack(request);
       setSong(result);
       setVocalDemo(null); // Clear previous vocal demo
 
-      toast.success('Premium track generated!', {
+      toast.success('Basic track generated!', {
         description: `"${result.title}" is ready`,
       });
     } catch (error: any) {
-      console.error('Failed to generate track:', error);
-      toast.error('Failed to generate track', {
+      console.error('Failed to generate basic track:', error);
+      toast.error('Failed to generate basic track', {
         description: error.detail || error.message || 'Please try again',
       });
     } finally {
-      setGenerating(false);
+      setIsGeneratingBasic(false);
     }
   };
 
@@ -323,23 +356,44 @@ export function MusicStudio() {
                 />
               </div>
 
-              <Button
-                className="w-full bg-slate-900 hover:bg-slate-800 mt-2"
-                onClick={handleGenerate}
-                disabled={generating}
-              >
-                {generating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generating Song...
-                  </>
-                ) : (
-                  <>
-                    <Music className="w-4 h-4 mr-2" />
-                    Generate Song
-                  </>
-                )}
-              </Button>
+              {/* Two Generation Buttons */}
+              <div className="flex gap-3 mt-6">
+                <Button
+                  className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+                  onClick={handleMagicTrack}
+                  disabled={isGeneratingMagic || isGeneratingBasic}
+                >
+                  {isGeneratingMagic ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Creating AI Magic Track...
+                    </>
+                  ) : (
+                    <>
+                      ✨ AI Magic Track
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={handleBasicTrack}
+                  disabled={isGeneratingMagic || isGeneratingBasic}
+                >
+                  {isGeneratingBasic ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Music className="w-4 h-4 mr-2" />
+                      Generate Basic Track
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </Card>
 
@@ -406,22 +460,23 @@ export function MusicStudio() {
           )}
         </div>
 
-        {/* Right Column - Song Blueprint */}
+        {/* Right Column - AI Producer Output */}
         <div className="space-y-6">
           {!song ? (
             <Card className="p-12 bg-white border-slate-200 shadow-sm text-center">
               <Music className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <h5 className="text-slate-900 mb-2">No song generated yet</h5>
+              <h5 className="text-slate-900 mb-2">No track generated yet</h5>
               <p className="text-sm text-slate-600">
-                Configure your settings and click "Generate Song" to create a full song blueprint with lyrics
+                Use the buttons on the left to generate a track with AI Magic or Basic mode
               </p>
             </Card>
           ) : (
             <>
+              {/* Title & Metadata */}
               <Card className="p-6 bg-white border-slate-200 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-slate-900 font-semibold">{song.title}</h4>
+                    <h4 className="text-slate-900 font-semibold text-lg">{song.title}</h4>
                     <p className="text-sm text-slate-600 mt-1">
                       {song.vocal_style.gender.charAt(0).toUpperCase() + song.vocal_style.gender.slice(1)} vocals •{' '}
                       {song.vocal_style.tone} •{' '}
@@ -433,14 +488,27 @@ export function MusicStudio() {
                     Generated
                   </Badge>
                 </div>
+              </Card>
 
-                {/* Producer Plan Summary */}
-                {song.plan_summary && (
-                  <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-200 mt-4">
-                    <Label className="text-xs text-indigo-900 font-semibold uppercase">Producer Plan</Label>
-                    <p className="text-xs text-slate-700 mt-1">{song.plan_summary}</p>
+              {/* Producer Plan */}
+              {song.plan_summary && (
+                <Card className="p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-200 shadow-sm">
+                  <h5 className="text-slate-900 mb-2 font-semibold flex items-center gap-2">
+                    <Music className="w-5 h-5 text-indigo-600" />
+                    Producer Plan
+                  </h5>
+                  <p className="text-xs text-slate-500 mb-3">
+                    How your influences, artists, and context were interpreted
+                  </p>
+                  <div className="p-3 bg-white rounded-lg border border-indigo-200">
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{song.plan_summary}</p>
                   </div>
-                )}
+                </Card>
+              )}
+
+              {/* Song Blueprint */}
+              <Card className="p-6 bg-white border-slate-200 shadow-sm">
+                <h5 className="text-slate-900 mb-4 font-semibold">Song Blueprint</h5>
 
                 <div className="space-y-4">
                   {/* Hook */}
@@ -456,15 +524,7 @@ export function MusicStudio() {
                   </div>
                 </div>
 
-                <div className="flex gap-2 mt-6">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={playDemo}
-                  >
-                    <Play className="w-4 h-4 mr-2" />
-                    Play Demo
-                  </Button>
+                <div className="flex gap-2 mt-4">
                   <Button
                     variant="outline"
                     className="flex-1"
@@ -474,83 +534,70 @@ export function MusicStudio() {
                     Copy Lyrics
                   </Button>
                 </div>
-
-                <Button
-                  className="w-full bg-blue-600 hover:bg-blue-700 mt-3"
-                  onClick={handleGenerateVocals}
-                  disabled={generatingVocals}
-                >
-                  {generatingVocals ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Generating Vocals...
-                    </>
-                  ) : (
-                    <>
-                      <Mic className="w-4 h-4 mr-2" />
-                      Generate Vocals
-                    </>
-                  )}
-                </Button>
               </Card>
 
-              {/* Vocal Demo Player */}
-              {vocalDemo && (
-                <Card className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-sm">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Mic className="w-5 h-5 text-blue-600" />
-                    <h5 className="text-slate-900 font-medium">Vocal Demo</h5>
-                    <Badge className="bg-blue-100 text-blue-700 ml-auto">
-                      <Check className="w-3 h-3 mr-1" />
-                      Ready
-                    </Badge>
+              {/* Audio Demos */}
+              <Card className="p-6 bg-white border-slate-200 shadow-sm">
+                <h5 className="text-slate-900 mb-4 font-semibold">Audio Demos</h5>
+
+                {/* Backing Track */}
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm text-slate-700 mb-2 block">Backing Track</Label>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={playDemo}
+                    >
+                      <Play className="w-4 h-4 mr-2" />
+                      Play Backing Track
+                    </Button>
                   </div>
 
-                  <div className="space-y-4">
-                    {/* Vocal Info */}
-                    <div className="p-4 bg-white rounded-lg border border-blue-200">
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div>
-                          <span className="text-slate-600">Gender:</span>
-                          <span className="ml-2 font-medium capitalize">{vocalDemo.vocal_style.gender}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-600">Tone:</span>
-                          <span className="ml-2 font-medium capitalize">{vocalDemo.vocal_style.tone}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-600">Energy:</span>
-                          <span className="ml-2 font-medium capitalize">{vocalDemo.vocal_style.energy}</span>
-                        </div>
-                        {vocalDemo.duration_seconds && (
-                          <div>
-                            <span className="text-slate-600">Duration:</span>
-                            <span className="ml-2 font-medium">{vocalDemo.duration_seconds}s</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Audio Player */}
-                    <div className="p-4 bg-white rounded-lg border border-blue-200">
-                      <audio
-                        controls
-                        className="w-full"
-                        src={vocalDemo.audio_url}
+                  {/* Vocals Section */}
+                  <div className="pt-3 border-t border-slate-200">
+                    <Label className="text-sm text-slate-700 mb-2 block">Vocals</Label>
+                    {!vocalDemo ? (
+                      <Button
+                        className="w-full bg-blue-600 hover:bg-blue-700"
+                        onClick={handleGenerateVocals}
+                        disabled={generatingVocals}
                       >
-                        Your browser does not support the audio element.
-                      </audio>
-                    </div>
-
-                    {/* Notes */}
-                    {vocalDemo.notes && (
-                      <div className="p-3 bg-blue-100 rounded text-xs text-blue-900">
-                        {vocalDemo.notes}
+                        {generatingVocals ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Generating Vocals...
+                          </>
+                        ) : (
+                          <>
+                            <Mic className="w-4 h-4 mr-2" />
+                            Generate Vocals
+                          </>
+                        )}
+                      </Button>
+                    ) : (
+                      <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Badge className="bg-blue-100 text-blue-700">
+                            <Check className="w-3 h-3 mr-1" />
+                            Ready
+                          </Badge>
+                        </div>
+                        <audio
+                          controls
+                          className="w-full mb-2"
+                          src={vocalDemo.audio_url}
+                        >
+                          Your browser does not support the audio element.
+                        </audio>
+                        {vocalDemo.notes && (
+                          <p className="text-xs text-slate-600 mt-2">{vocalDemo.notes}</p>
+                        )}
                       </div>
                     )}
                   </div>
-                </Card>
-              )}
+                </div>
+              </Card>
 
               {/* Song Structure */}
               <Card className="p-6 bg-white border-slate-200 shadow-sm">
