@@ -15,6 +15,10 @@ httpx==0.26.0
 # AI Integration
 openai==1.10.0
 
+# Audio Processing
+numpy==1.26.3
+soundfile==0.12.1
+
 # Utilities
 python-dotenv==1.0.0
 python-multipart==0.0.6

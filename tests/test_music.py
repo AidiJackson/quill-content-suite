@@ -1,7 +1,9 @@
 """Tests for music generation endpoints."""
 
+import os
 import pytest
 from fastapi.testclient import TestClient
+from pathlib import Path
 
 
 def test_generate_music_basic(client: TestClient):
@@ -41,9 +43,9 @@ def test_generate_music_basic(client: TestClient):
     assert "tone" in vocal
     assert "energy" in vocal
 
-    # Check fake_audio_url format
-    assert data["fake_audio_url"].startswith("https://")
-    assert ".mp3" in data["fake_audio_url"]
+    # Check fake_audio_url format (now points to static file)
+    assert data["fake_audio_url"].startswith("/static/audio/music/")
+    assert ".wav" in data["fake_audio_url"]
 
 
 def test_generate_music_with_tempo(client: TestClient):
@@ -184,3 +186,71 @@ def test_generate_music_deterministic(client: TestClient):
     assert data1["track_id"] == data2["track_id"]
     assert data1["title"] == data2["title"]
     assert data1["hook"] == data2["hook"]
+
+
+def test_procedural_audio_file_created(client: TestClient):
+    """Test that procedural audio files are actually created on disk."""
+    response = client.post(
+        "/api/music/generate",
+        json={
+            "genre": "Trap",
+            "mood": "Energetic",
+            "tempo_bpm": 140,
+        },
+        headers={"X-User-Id": "test-user"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # Extract filename from URL
+    audio_url = data["fake_audio_url"]
+    assert audio_url.startswith("/static/audio/music/")
+
+    # Construct file path
+    filename = audio_url.split("/")[-1]
+    static_dir = Path(__file__).parent.parent / "static" / "audio" / "music"
+    file_path = static_dir / filename
+
+    # Check file exists
+    assert file_path.exists(), f"Audio file not found at {file_path}"
+
+    # Check file size is reasonable (should be > 0)
+    file_size = file_path.stat().st_size
+    assert file_size > 0, "Audio file is empty"
+
+    # For an 8-bar track at 140 BPM (~14s), expect at least 100KB
+    assert file_size > 100_000, f"Audio file too small: {file_size} bytes"
+
+
+def test_procedural_audio_different_genres(client: TestClient):
+    """Test that different genres produce different audio files."""
+    genres_to_test = [
+        ("Trap", "Energetic", 140),
+        ("LoFi", "Chill", 85),
+    ]
+
+    for genre, mood, tempo in genres_to_test:
+        response = client.post(
+            "/api/music/generate",
+            json={
+                "genre": genre,
+                "mood": mood,
+                "tempo_bpm": tempo,
+            },
+            headers={"X-User-Id": "test-user"},
+        )
+
+        assert response.status_code == 200, f"Failed for genre: {genre}"
+        data = response.json()
+
+        # Check audio URL
+        audio_url = data["fake_audio_url"]
+        assert audio_url.startswith("/static/audio/music/")
+        assert ".wav" in audio_url
+
+        # Verify file exists
+        filename = audio_url.split("/")[-1]
+        static_dir = Path(__file__).parent.parent / "static" / "audio" / "music"
+        file_path = static_dir / filename
+        assert file_path.exists(), f"Audio file not found for genre {genre}"

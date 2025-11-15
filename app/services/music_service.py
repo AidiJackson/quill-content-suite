@@ -5,9 +5,9 @@ import uuid
 from typing import Any, Dict, List, Optional
 from pathlib import Path
 
+import numpy as np
+import soundfile as sf
 from sqlalchemy.orm import Session
-from pydub import AudioSegment
-from pydub.generators import Sine
 
 from app.core.logging import get_logger
 from app.models.media_file import MediaFile, MediaType
@@ -19,6 +19,287 @@ logger = get_logger(__name__)
 # Audio storage directory
 AUDIO_DIR = Path(__file__).parent.parent.parent / "static" / "audio" / "music"
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+
+
+class ProceduralMusicEngine:
+    """
+    Procedural music composition engine.
+
+    Generates simple instrumental backing tracks using NumPy,
+    with genre-specific drums, bass, and optional pads.
+    """
+
+    SAMPLE_RATE = 44100
+
+    # Genre-specific musical parameters
+    GENRE_PARAMS = {
+        "trap": {
+            "scale": [55, 65.4, 73.4, 82.4, 98, 110],  # A minor pentatonic (bass)
+            "kick_pattern": [1, 0, 0, 0, 1, 0, 1, 0],  # More kicks for trap
+            "snare_pattern": [0, 0, 1, 0, 0, 0, 1, 0],
+            "hihat_pattern": [1, 1, 1, 1, 1, 1, 1, 1],  # Constant hats
+            "bass_intensity": 0.4,
+        },
+        "drill": {
+            "scale": [49, 58.3, 65.4, 73.4, 87.3, 98],  # G minor pentatonic
+            "kick_pattern": [1, 0, 1, 0, 1, 0, 0, 0],
+            "snare_pattern": [0, 0, 1, 0, 0, 0, 1, 0],
+            "hihat_pattern": [1, 1, 1, 1, 1, 1, 1, 1],
+            "bass_intensity": 0.5,
+        },
+        "pop": {
+            "scale": [65.4, 73.4, 82.4, 87.3, 98, 110],  # C major
+            "kick_pattern": [1, 0, 0, 0, 1, 0, 0, 0],
+            "snare_pattern": [0, 0, 1, 0, 0, 0, 1, 0],
+            "hihat_pattern": [0, 1, 0, 1, 0, 1, 0, 1],
+            "bass_intensity": 0.3,
+        },
+        "lofi": {
+            "scale": [55, 61.7, 69.3, 82.4, 92.5, 110],  # A minor (jazzy)
+            "kick_pattern": [1, 0, 0, 0, 0, 0, 1, 0],
+            "snare_pattern": [0, 0, 0, 1, 0, 0, 0, 1],
+            "hihat_pattern": [0, 0, 1, 0, 0, 0, 1, 0],  # Sparse
+            "bass_intensity": 0.25,
+        },
+        "edm": {
+            "scale": [49, 58.3, 65.4, 77.8, 87.3, 98],  # G major
+            "kick_pattern": [1, 0, 0, 0, 1, 0, 0, 0],
+            "snare_pattern": [0, 0, 1, 0, 0, 0, 1, 0],
+            "hihat_pattern": [1, 1, 1, 1, 1, 1, 1, 1],
+            "bass_intensity": 0.4,
+        },
+        "rnb": {
+            "scale": [58.3, 65.4, 73.4, 77.8, 87.3, 98],  # Bb major
+            "kick_pattern": [1, 0, 0, 0, 0, 1, 0, 0],
+            "snare_pattern": [0, 0, 1, 0, 0, 0, 1, 0],
+            "hihat_pattern": [0, 1, 0, 1, 0, 1, 0, 1],
+            "bass_intensity": 0.3,
+        },
+        "hiphop": {
+            "scale": [55, 65.4, 73.4, 82.4, 98, 110],  # A minor
+            "kick_pattern": [1, 0, 0, 0, 1, 0, 0, 0],
+            "snare_pattern": [0, 0, 1, 0, 0, 0, 1, 0],
+            "hihat_pattern": [0, 1, 0, 1, 0, 1, 0, 1],
+            "bass_intensity": 0.35,
+        },
+        "afrobeat": {
+            "scale": [65.4, 73.4, 82.4, 98, 110, 130.8],  # C major
+            "kick_pattern": [1, 0, 1, 0, 1, 0, 0, 1],
+            "snare_pattern": [0, 0, 1, 0, 0, 1, 0, 0],
+            "hihat_pattern": [1, 1, 1, 1, 1, 1, 1, 1],
+            "bass_intensity": 0.35,
+        },
+    }
+
+    def generate_backing_track(self, request: MusicGenerateRequest) -> str:
+        """
+        Generate a procedural backing track based on genre, mood, and tempo.
+
+        Args:
+            request: Music generation request with genre, mood, tempo_bpm
+
+        Returns:
+            URL path to the generated audio file
+        """
+        try:
+            # Get parameters
+            genre = request.genre.lower()
+            tempo_bpm = request.tempo_bpm or 120
+
+            # Calculate timing
+            bars = 8
+            beats_per_bar = 4
+            duration_seconds = bars * beats_per_bar * 60 / tempo_bpm
+            num_samples = int(duration_seconds * self.SAMPLE_RATE)
+
+            # Get genre parameters (default to pop if not found)
+            params = self.GENRE_PARAMS.get(genre, self.GENRE_PARAMS["pop"])
+
+            # Generate track components
+            kick = self._generate_kick(num_samples, tempo_bpm, params["kick_pattern"])
+            snare = self._generate_snare(num_samples, tempo_bpm, params["snare_pattern"])
+            hihat = self._generate_hihat(num_samples, tempo_bpm, params["hihat_pattern"])
+            bass = self._generate_bass(num_samples, tempo_bpm, params["scale"], params["bass_intensity"])
+
+            # Add pad for uplifting/dreamy moods
+            if request.mood.lower() in ["uplifting", "dreamy", "emotional"]:
+                pad = self._generate_pad(num_samples, tempo_bpm, params["scale"])
+                mix = kick + snare + hihat + bass + pad
+            else:
+                mix = kick + snare + hihat + bass
+
+            # Normalize to prevent clipping
+            max_val = np.max(np.abs(mix))
+            if max_val > 0:
+                mix = mix / max_val * 0.85  # Leave headroom
+
+            # Apply fade in/out
+            fade_samples = int(0.5 * self.SAMPLE_RATE)  # 0.5 second fade
+            fade_in = np.linspace(0, 1, fade_samples)
+            fade_out = np.linspace(1, 0, fade_samples)
+            mix[:fade_samples] *= fade_in
+            mix[-fade_samples:] *= fade_out
+
+            # Generate track ID
+            track_input = f"{request.genre}{request.mood}{request.reference_text or ''}"
+            track_id = hashlib.md5(track_input.encode()).hexdigest()[:12]
+
+            # Save to file
+            filename = f"track-{track_id}.wav"
+            file_path = AUDIO_DIR / filename
+            sf.write(str(file_path), mix, self.SAMPLE_RATE)
+
+            logger.info(f"Generated procedural track: {track_id} ({genre}, {tempo_bpm} BPM, {duration_seconds:.1f}s)")
+
+            return f"/static/audio/music/{filename}"
+
+        except Exception as e:
+            logger.error(f"Failed to generate procedural music: {e}")
+            return f"/static/audio/music/placeholder.wav"
+
+    def _generate_kick(self, num_samples: int, tempo_bpm: float, pattern: List[int]) -> np.ndarray:
+        """Generate kick drum track."""
+        track = np.zeros(num_samples)
+        samples_per_beat = int(60 * self.SAMPLE_RATE / tempo_bpm)
+
+        beat_index = 0
+        current_sample = 0
+
+        while current_sample < num_samples:
+            if pattern[beat_index % len(pattern)] == 1:
+                # Create kick: low frequency sine with exponential decay
+                kick_duration = int(0.15 * self.SAMPLE_RATE)
+                t = np.arange(kick_duration) / self.SAMPLE_RATE
+                freq = 60  # Low frequency
+                envelope = np.exp(-10 * t)  # Fast decay
+                kick = 0.8 * np.sin(2 * np.pi * freq * t * (1 - 0.7 * t)) * envelope
+
+                end_sample = min(current_sample + kick_duration, num_samples)
+                actual_duration = end_sample - current_sample
+                track[current_sample:end_sample] += kick[:actual_duration]
+
+            current_sample += samples_per_beat
+            beat_index += 1
+
+        return track
+
+    def _generate_snare(self, num_samples: int, tempo_bpm: float, pattern: List[int]) -> np.ndarray:
+        """Generate snare drum track."""
+        track = np.zeros(num_samples)
+        samples_per_beat = int(60 * self.SAMPLE_RATE / tempo_bpm)
+
+        beat_index = 0
+        current_sample = 0
+
+        while current_sample < num_samples:
+            if pattern[beat_index % len(pattern)] == 1:
+                # Create snare: noise burst with envelope
+                snare_duration = int(0.1 * self.SAMPLE_RATE)
+                t = np.arange(snare_duration) / self.SAMPLE_RATE
+                noise = np.random.randn(snare_duration)
+                envelope = np.exp(-20 * t)
+                snare = 0.3 * noise * envelope
+
+                end_sample = min(current_sample + snare_duration, num_samples)
+                actual_duration = end_sample - current_sample
+                track[current_sample:end_sample] += snare[:actual_duration]
+
+            current_sample += samples_per_beat
+            beat_index += 1
+
+        return track
+
+    def _generate_hihat(self, num_samples: int, tempo_bpm: float, pattern: List[int]) -> np.ndarray:
+        """Generate hi-hat track."""
+        track = np.zeros(num_samples)
+        samples_per_beat = int(60 * self.SAMPLE_RATE / tempo_bpm)
+
+        beat_index = 0
+        current_sample = 0
+
+        while current_sample < num_samples:
+            if pattern[beat_index % len(pattern)] == 1:
+                # Create hi-hat: high-frequency noise burst
+                hihat_duration = int(0.05 * self.SAMPLE_RATE)
+                noise = np.random.randn(hihat_duration)
+                # High-pass filter (simple)
+                hihat = np.diff(noise, prepend=0)
+                envelope = np.exp(-50 * np.arange(hihat_duration) / self.SAMPLE_RATE)
+                hihat = 0.15 * hihat * envelope
+
+                end_sample = min(current_sample + hihat_duration, num_samples)
+                actual_duration = end_sample - current_sample
+                track[current_sample:end_sample] += hihat[:actual_duration]
+
+            current_sample += samples_per_beat
+            beat_index += 1
+
+        return track
+
+    def _generate_bass(self, num_samples: int, tempo_bpm: float, scale: List[float], intensity: float) -> np.ndarray:
+        """Generate bassline track."""
+        track = np.zeros(num_samples)
+        samples_per_bar = int(4 * 60 * self.SAMPLE_RATE / tempo_bpm)
+
+        # Simple progression: I - VI - VII - V (in terms of scale degrees)
+        progression = [scale[0], scale[4], scale[5], scale[3]]
+
+        bar_index = 0
+        current_sample = 0
+
+        while current_sample < num_samples:
+            freq = progression[bar_index % len(progression)]
+            bar_duration = min(samples_per_bar, num_samples - current_sample)
+            t = np.arange(bar_duration) / self.SAMPLE_RATE
+
+            # Bass note with slight envelope
+            bass_note = intensity * np.sin(2 * np.pi * freq * t)
+            # Add subtle envelope
+            envelope = 1 - 0.3 * t / (bar_duration / self.SAMPLE_RATE)
+            envelope = np.clip(envelope, 0, 1)
+
+            track[current_sample:current_sample + bar_duration] = bass_note * envelope
+
+            current_sample += samples_per_bar
+            bar_index += 1
+
+        return track
+
+    def _generate_pad(self, num_samples: int, tempo_bpm: float, scale: List[float]) -> np.ndarray:
+        """Generate sustained pad/chord track."""
+        track = np.zeros(num_samples)
+        samples_per_2bars = int(8 * 60 * self.SAMPLE_RATE / tempo_bpm)
+
+        # Simple chord progression using scale notes
+        chords = [
+            [scale[0], scale[2], scale[4]],  # Root triad
+            [scale[3], scale[5], scale[1]],  # Different voicing
+        ]
+
+        chord_index = 0
+        current_sample = 0
+
+        while current_sample < num_samples:
+            chord = chords[chord_index % len(chords)]
+            chord_duration = min(samples_per_2bars, num_samples - current_sample)
+            t = np.arange(chord_duration) / self.SAMPLE_RATE
+
+            # Generate chord by summing frequencies
+            chord_sound = np.zeros(chord_duration)
+            for freq in chord:
+                chord_sound += 0.05 * np.sin(2 * np.pi * freq * t)
+
+            # Add vibrato for interest
+            vibrato = 0.002 * np.sin(2 * np.pi * 5 * t)  # 5 Hz vibrato
+            for i, freq in enumerate(chord):
+                chord_sound += 0.05 * np.sin(2 * np.pi * freq * t * (1 + vibrato))
+
+            track[current_sample:current_sample + chord_duration] = chord_sound
+
+            current_sample += samples_per_2bars
+            chord_index += 1
+
+        return track
 
 
 class FakeMusicGenerator:
@@ -127,7 +408,7 @@ class FakeMusicGenerator:
         )
 
         # Generate actual audio file
-        audio_url = self._generate_audio(track_id, request.genre, tempo_bpm)
+        audio_url = self._generate_audio(request)
 
         return MusicGenerateResponse(
             track_id=track_id,
@@ -286,71 +567,18 @@ We'll still be standing proud
 Nothing can stop us now
 We're breaking through the clouds"""
 
-    def _generate_audio(self, track_id: str, genre: str, tempo_bpm: int) -> str:
+    def _generate_audio(self, request: MusicGenerateRequest) -> str:
         """
-        Generate a simple audio backing track.
+        Generate a procedural backing track using the ProceduralMusicEngine.
 
-        Creates a basic rhythmic pattern using sine waves at different frequencies.
+        Args:
+            request: Full music generation request with genre, mood, tempo
+
+        Returns:
+            URL path to the generated audio file
         """
-        try:
-            filename = f"{track_id}.wav"
-            file_path = AUDIO_DIR / filename
-
-            # Calculate beat duration in milliseconds
-            beat_duration_ms = int(60000 / tempo_bpm)
-
-            # Genre-specific frequency mappings (in Hz)
-            genre_freq_map = {
-                "trap": [220, 330, 440],      # A, E, A (minor feel)
-                "drill": [196, 294, 392],      # G, D, G
-                "afrobeat": [262, 392, 523],   # C, G, C (uplifting)
-                "lofi": [220, 277, 330],       # A, C#, E (jazzy)
-                "pop": [262, 330, 392],        # C, E, G (major)
-                "edm": [196, 330, 494],        # G, E, B
-                "rnb": [233, 294, 349],        # Bb, D, F
-                "hiphop": [220, 293, 440],     # A, D, A
-            }
-
-            frequencies = genre_freq_map.get(genre.lower(), [262, 330, 392])
-
-            # Create 30 seconds of audio (typical preview length)
-            total_duration = 30000  # 30 seconds in ms
-
-            # Create silence as base
-            track = AudioSegment.silent(duration=total_duration)
-
-            # Add rhythmic pattern
-            pattern_duration = beat_duration_ms * 4  # 4-beat pattern
-            current_time = 0
-
-            while current_time < total_duration:
-                # Beat 1 - root note (longer)
-                tone = Sine(frequencies[0]).to_audio_segment(duration=beat_duration_ms // 2)
-                track = track.overlay(tone, position=current_time)
-
-                # Beat 3 - fifth (shorter)
-                tone2 = Sine(frequencies[1]).to_audio_segment(duration=beat_duration_ms // 3)
-                track = track.overlay(tone2, position=current_time + beat_duration_ms * 2)
-
-                current_time += pattern_duration
-
-            # Fade in/out for smooth playback
-            track = track.fade_in(1000).fade_out(2000)
-
-            # Reduce volume to -20dB so it's not too loud
-            track = track - 20
-
-            # Export as WAV (doesn't require ffmpeg)
-            track.export(str(file_path), format="wav")
-
-            logger.info(f"Generated audio track: {track_id} ({genre}, {tempo_bpm} BPM)")
-
-            return f"/static/audio/music/{filename}"
-
-        except Exception as e:
-            logger.error(f"Failed to generate audio: {e}")
-            # Return a fallback URL
-            return f"/static/audio/music/placeholder.wav"
+        engine = ProceduralMusicEngine()
+        return engine.generate_backing_track(request)
 
 
 class MusicService:
